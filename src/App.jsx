@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   Users,
-  BookOpen,
+  FileSignature, // Ikon kertas dengan pena
+  Settings, // Ikon pengaturan
   Wallet,
   Plus,
   Search,
@@ -144,10 +145,12 @@ export default function NinaProjectApp() {
   const [search, setSearch] = useState("");
   const [filterKelas, setFilterKelas] = useState("");
 
-  // --- STATE DATA (Local Storage / Supabase Ready) ---
+  // --- STATE DATA (Local Storage) ---
   const [kelasOptions, setKelasOptions] = useState(() => {
     const saved = localStorage.getItem("nina_kelas");
-    return saved ? JSON.parse(saved) : ["Kelas Tahfidz", "Kelas Sore"];
+    return saved
+      ? JSON.parse(saved)
+      : ["Kelas 1", "Kelas 2", "Kelas 3", "Kelas 4", "Kelas 5", "Kelas 6"];
   });
 
   const [siswaData, setSiswaData] = useState(() => {
@@ -305,6 +308,12 @@ export default function NinaProjectApp() {
     }
   };
 
+  // --- GET NOMOR KWITANSI TERSTRUKTUR (ANGKA 1, 2, 3...) ---
+  const getNomorKwitansi = (siswaId) => {
+    const index = siswaData.findIndex((s) => s.id === siswaId);
+    return index !== -1 ? index + 1 : 1;
+  };
+
   // --- FILTER & CALCULATIONS ---
   const filteredSiswa = useMemo(() => {
     return siswaData.filter((s) => {
@@ -314,19 +323,24 @@ export default function NinaProjectApp() {
     });
   }, [siswaData, search, filterKelas]);
 
-  const grandTotalKeuangan = useMemo(() => {
+  const { grandTotalKeuangan, totalCash, totalTransfer } = useMemo(() => {
     let total = 0;
+    let cash = 0;
+    let tf = 0;
     siswaData.forEach((s) => {
       const k = keuanganData[s.id];
       if (k) {
-        total +=
+        const sum =
           (Number(k.infaq) || 0) +
           (Number(k.cicilan) || 0) +
           (Number(k.konsumsi) || 0) +
           (Number(k.makan) || 0);
+        total += sum;
+        if (k.metode === "Transfer") tf += sum;
+        else cash += sum;
       }
     });
-    return total;
+    return { grandTotalKeuangan: total, totalCash: cash, totalTransfer: tf };
   }, [siswaData, keuanganData]);
 
   // --- EXPORT HANDLERS ---
@@ -407,15 +421,16 @@ export default function NinaProjectApp() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-teal-200 pb-20 md:pb-0">
-      {/* CSS KHUSUS UNTUK PRINT */}
+      {/* CSS KHUSUS UNTUK PRINT (PDF) */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
         @media print {
-          body * { visibility: hidden; }
-          #print-area, #print-area * { visibility: visible; }
-          #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          body * { visibility: hidden !important; }
+          .print-mode, .print-mode * { visibility: visible !important; }
+          .print-mode { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
           .no-print { display: none !important; }
+          @page { size: auto; margin: 15mm; }
         }
       `,
         }}
@@ -430,9 +445,9 @@ export default function NinaProjectApp() {
               onClick={() => setActiveTab("home")}
             >
               <div className="bg-teal-50 border border-teal-100 p-2 rounded-xl">
-                <BookOpen className="w-5 h-5 text-teal-600" />
+                <FileSignature className="w-5 h-5 text-teal-600" />
               </div>
-              {/* BRAND: NINA'S PROJECT (Warna Navy, Jarak Huruf Lebar) */}
+              {/* BRAND: NINA'S PROJECT */}
               <span className="font-black text-lg md:text-xl text-[#000080] tracking-[0.25em] uppercase drop-shadow-sm ml-1">
                 Nina's Project
               </span>
@@ -466,17 +481,17 @@ export default function NinaProjectApp() {
               </button>
             </div>
 
-            {/* Mobile Header Profile */}
+            {/* Mobile Header Profile (Pengaturan) */}
             <div className="md:hidden flex items-center gap-2">
-              <div className="w-8 h-8 bg-teal-50 rounded-full flex items-center justify-center border border-teal-200">
-                <span className="font-bold text-sm text-teal-700">N</span>
+              <div className="w-9 h-9 bg-teal-50 rounded-full flex items-center justify-center border border-teal-200 cursor-pointer active:scale-95 transition-transform">
+                <Settings className="w-5 h-5 text-teal-700" />
               </div>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* --- BOTTOM NAVIGATION BAR (Khusus Mobile Ala Bank) --- */}
+      {/* --- BOTTOM NAVIGATION BAR --- */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center pb-safe pt-2 pb-2 z-40 px-2 no-print shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-2xl">
         <button
           onClick={() => setActiveTab("home")}
@@ -539,33 +554,60 @@ export default function NinaProjectApp() {
       {/* --- MAIN CONTENT AREA --- */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 no-print">
         {/* =========================================
-            TAB 1: BERANDA / DASHBOARD (MOBILE & DESKTOP)
+            TAB 1: BERANDA / DASHBOARD
         ========================================= */}
         {activeTab === "home" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Card Saldo / Total Kas */}
-            <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+            <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-3xl p-5 md:p-8 text-white shadow-xl relative overflow-hidden">
               <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-              <p className="text-teal-100 text-sm font-semibold mb-1 flex items-center gap-2">
-                <TrendingUp size={16} /> Total Dana Terkumpul
-              </p>
-              <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">
-                {formatRp(grandTotalKeuangan)}
-              </h2>
 
-              <div className="flex gap-4 border-t border-teal-400/30 pt-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                {/* Total Keseluruhan */}
                 <div>
-                  <p className="text-teal-100 text-xs uppercase tracking-widest font-bold mb-1">
-                    Total Siswa
+                  <p className="text-teal-100 text-sm font-semibold mb-1 flex items-center gap-2">
+                    <TrendingUp size={16} /> Grand Total Dana
                   </p>
-                  <p className="font-bold text-lg">{siswaData.length} Anak</p>
+                  <h2 className="text-4xl md:text-5xl font-black tracking-tight">
+                    {formatRp(grandTotalKeuangan)}
+                  </h2>
+                </div>
+
+                {/* Rincian Cash & Transfer */}
+                <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
+                  <div className="bg-white/10 p-4 rounded-2xl border border-white/20 backdrop-blur-sm shadow-inner text-center md:text-left min-w-[140px]">
+                    <p className="text-teal-100 text-[10px] md:text-xs uppercase tracking-widest font-bold mb-1">
+                      Total Cash
+                    </p>
+                    <p className="font-bold text-lg md:text-xl text-white">
+                      {formatRp(totalCash)}
+                    </p>
+                  </div>
+                  <div className="bg-white/10 p-4 rounded-2xl border border-white/20 backdrop-blur-sm shadow-inner text-center md:text-left min-w-[140px]">
+                    <p className="text-teal-100 text-[10px] md:text-xs uppercase tracking-widest font-bold mb-1">
+                      Total Transfer
+                    </p>
+                    <p className="font-bold text-lg md:text-xl text-white">
+                      {formatRp(totalTransfer)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Statistik Siswa & Kelas */}
+              <div className="flex gap-6 border-t border-teal-400/30 pt-4 mt-6">
+                <div>
+                  <p className="text-teal-100 text-[10px] uppercase tracking-widest font-bold mb-1">
+                    Jumlah Anak
+                  </p>
+                  <p className="font-bold text-lg">{siswaData.length} Siswa</p>
                 </div>
                 <div>
-                  <p className="text-teal-100 text-xs uppercase tracking-widest font-bold mb-1">
+                  <p className="text-teal-100 text-[10px] uppercase tracking-widest font-bold mb-1">
                     Total Kelas
                   </p>
                   <p className="font-bold text-lg">
-                    {kelasOptions.length} Kelas
+                    {kelasOptions.length} Kategori
                   </p>
                 </div>
               </div>
@@ -635,7 +677,7 @@ export default function NinaProjectApp() {
               </div>
             </div>
 
-            {/* List Riwayat / Pendaftar Terbaru (Khusus Tampilan Home) */}
+            {/* List Pendaftar Terbaru */}
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold text-slate-800">
@@ -904,12 +946,12 @@ export default function NinaProjectApp() {
         )}
 
         {/* =========================================
-            TAB 3: REKAP NILAI
+            TAB 3: REKAP NILAI (READY UNTUK PRINT PDF)
         ========================================= */}
         {activeTab === "nilai" && (
-          <div id="print-area-nilai">
+          <div>
             {/* TAMPILAN MOBILE: KARTU NILAI */}
-            <div className="md:hidden space-y-3">
+            <div className="md:hidden space-y-3 no-print">
               {filteredSiswa.length === 0 ? (
                 <div className="text-center p-8 bg-white rounded-2xl border border-slate-100">
                   <p className="text-slate-400 font-medium">Belum ada siswa.</p>
@@ -993,7 +1035,8 @@ export default function NinaProjectApp() {
             </div>
 
             {/* TAMPILAN DESKTOP: TABEL DENGAN INLINE EDIT */}
-            <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            {/* Class print-mode ditambahkan disini agar tercetak mulus ke PDF */}
+            <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-mode">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm whitespace-nowrap">
                   <thead className="bg-slate-50 border-b border-slate-200">
@@ -1120,9 +1163,9 @@ export default function NinaProjectApp() {
               <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end no-print hidden md:flex">
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold flex items-center gap-2"
+                  className="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg hover:bg-slate-900 active:scale-95 transition-transform"
                 >
-                  <Printer size={16} /> Print Tabel Nilai
+                  <Printer size={16} /> Print ke PDF
                 </button>
               </div>
             </div>
@@ -1445,7 +1488,7 @@ export default function NinaProjectApp() {
                     required
                     type="text"
                     className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-teal-500 focus:bg-white transition-all text-sm font-medium"
-                    placeholder="Misal: Kelas 3A, Kelas Sore..."
+                    placeholder="Misal: Kelas 1, Kelas 2..."
                     value={formData.nama_kelas || ""}
                     onChange={(e) =>
                       setFormData({ ...formData, nama_kelas: e.target.value })
@@ -1710,7 +1753,7 @@ export default function NinaProjectApp() {
         </div>
       )}
 
-      {/* --- MODAL KWITANSI DIGITAL --- */}
+      {/* --- MODAL KWITANSI DIGITAL (Kompak/Lebih Kecil) --- */}
       {modalType === "kwitansi" && activeSiswa && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 overflow-y-auto p-4 md:p-8 animate-in fade-in duration-300">
           <div className="absolute top-4 right-4 flex gap-2 no-print z-50">
@@ -1728,32 +1771,33 @@ export default function NinaProjectApp() {
             </button>
           </div>
 
+          {/* DIKURANGI UKURANNYA MENJADI max-w-lg AGAR LEBIH PAS DI LAYAR */}
           <div
             id="print-area"
-            className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 md:p-8 relative print:shadow-none print:p-0 print:rounded-none mt-12 md:mt-0"
+            className="w-full max-w-lg bg-white rounded-xl shadow-2xl p-5 md:p-6 relative print:shadow-none print:p-0 print:rounded-none mt-12 md:mt-0 print-mode"
           >
-            <div className="flex justify-between items-start border-b-[3px] border-slate-800 pb-4 mb-6">
+            <div className="flex justify-between items-start border-b-[3px] border-slate-800 pb-3 mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 bg-teal-50 border-2 border-teal-600 rounded-xl flex items-center justify-center overflow-hidden">
-                  <BookOpen size={28} className="text-teal-600" />
+                <div className="w-12 h-12 bg-teal-50 border-2 border-teal-600 rounded-xl flex items-center justify-center overflow-hidden">
+                  <FileSignature size={24} className="text-teal-600" />
                 </div>
                 <div>
-                  <h1 className="text-xl md:text-2xl font-black text-[#000080] tracking-[0.25em] uppercase">
+                  <h1 className="text-lg md:text-xl font-black text-[#000080] tracking-[0.25em] uppercase">
                     NINA'S PROJECT
                   </h1>
-                  <p className="text-xs md:text-sm text-slate-500 font-bold uppercase mt-1">
+                  <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase mt-0.5">
                     Manajemen Akademik
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <h2 className="text-2xl md:text-3xl font-black text-slate-200 uppercase tracking-widest leading-none">
+                <h2 className="text-xl md:text-2xl font-black text-slate-200 uppercase tracking-widest leading-none">
                   Kwitansi
                 </h2>
-                <p className="text-sm font-bold text-slate-600 mt-2">
-                  No: #{Date.now().toString().slice(-6)}
+                <p className="text-sm font-bold text-slate-600 mt-1.5">
+                  No: {getNomorKwitansi(activeSiswa.id)}
                 </p>
-                <p className="text-[10px] md:text-xs text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   {new Date().toLocaleDateString("id-ID", {
                     day: "numeric",
                     month: "long",
@@ -1763,92 +1807,92 @@ export default function NinaProjectApp() {
               </div>
             </div>
 
-            <div className="bg-slate-50 p-4 md:p-5 rounded-xl border border-slate-200 mb-6 space-y-3">
-              <div className="flex items-end border-b border-dotted border-slate-300 pb-1.5">
-                <span className="w-32 md:w-48 font-bold text-slate-500 text-[10px] md:text-xs uppercase tracking-wider">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5 space-y-2">
+              <div className="flex items-end border-b border-dotted border-slate-300 pb-1">
+                <span className="w-28 md:w-36 font-medium text-slate-500 text-xs md:text-sm uppercase tracking-wider">
                   Terima Dari
                 </span>
-                <span className="flex-1 font-black text-base md:text-lg text-slate-800 ml-2 leading-tight">
+                <span className="flex-1 font-black text-xs md:text-sm text-slate-800 ml-2 leading-tight">
                   {activeSiswa.nama}
                 </span>
               </div>
-              <div className="flex items-end border-b border-dotted border-slate-300 pb-1.5">
-                <span className="w-32 md:w-48 font-bold text-slate-500 text-[10px] md:text-xs uppercase tracking-wider">
+              <div className="flex items-end border-b border-dotted border-slate-300 pb-1">
+                <span className="w-28 md:w-36 font-medium text-slate-500 text-xs md:text-sm uppercase tracking-wider">
                   Kategori Kelas
                 </span>
-                <span className="flex-1 font-bold text-slate-800 ml-2">
+                <span className="flex-1 font-black text-xs md:text-sm text-slate-800 ml-2">
                   {activeSiswa.kelas}
                 </span>
               </div>
-              <div className="flex items-end border-b border-dotted border-slate-300 pb-1.5">
-                <span className="w-32 md:w-48 font-bold text-slate-500 text-[10px] md:text-xs uppercase tracking-wider">
+              <div className="flex items-end border-b border-dotted border-slate-300 pb-1">
+                <span className="w-28 md:w-36 font-medium text-slate-500 text-xs md:text-sm uppercase tracking-wider">
                   Metode Bayar
                 </span>
-                <span className="flex-1 font-bold text-slate-800 ml-2">
+                <span className="flex-1 font-black text-xs md:text-sm text-slate-800 ml-2">
                   {keuanganData[activeSiswa.id]?.metode || "Cash"}
                   {keuanganData[activeSiswa.id]?.status === "Sudah"
                     ? " (Lunas)"
-                    : " (Belum Diserahkan)"}
+                    : " (Belum)"}
                 </span>
               </div>
             </div>
 
-            <table className="w-full mb-8 border border-slate-300 text-xs md:text-sm">
+            <table className="w-full mb-6 border border-slate-300 text-xs md:text-sm">
               <thead className="bg-slate-100">
                 <tr>
-                  <th className="p-3 border-r border-slate-300 text-center font-bold text-slate-700 w-10">
+                  <th className="p-2 border-r border-slate-300 text-center font-bold text-slate-700 w-8">
                     #
                   </th>
-                  <th className="p-3 border-r border-slate-300 text-left font-bold text-slate-700">
+                  <th className="p-2 border-r border-slate-300 text-left font-bold text-slate-700">
                     Rincian Pembayaran
                   </th>
-                  <th className="p-3 text-right font-bold text-slate-700 w-32 md:w-48">
+                  <th className="p-2 text-right font-bold text-slate-700 w-28 md:w-36">
                     Nominal
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300">
                 <tr>
-                  <td className="p-3 border-r border-slate-300 text-center text-slate-500 font-medium">
+                  <td className="p-2 border-r border-slate-300 text-center text-slate-500 font-medium">
                     1
                   </td>
-                  <td className="p-3 border-r border-slate-300 text-slate-800 font-bold">
+                  <td className="p-2 border-r border-slate-300 text-slate-800 font-bold">
                     Infaq Pendidikan
                   </td>
-                  <td className="p-3 text-right text-slate-800 font-semibold">
+                  <td className="p-2 text-right text-slate-800 font-semibold">
                     {formatRp(keuanganData[activeSiswa.id]?.infaq)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-3 border-r border-slate-300 text-center text-slate-500 font-medium">
+                  <td className="p-2 border-r border-slate-300 text-center text-slate-500 font-medium">
                     2
                   </td>
-                  <td className="p-3 border-r border-slate-300 text-slate-800 font-bold">
+                  <td className="p-2 border-r border-slate-300 text-slate-800 font-bold">
                     Cicilan Daftar Ulang
                   </td>
-                  <td className="p-3 text-right text-slate-800 font-semibold">
+                  <td className="p-2 text-right text-slate-800 font-semibold">
                     {formatRp(keuanganData[activeSiswa.id]?.cicilan)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-3 border-r border-slate-300 text-center text-slate-500 font-medium">
+                  <td className="p-2 border-r border-slate-300 text-center text-slate-500 font-medium">
                     3
                   </td>
-                  <td className="p-3 border-r border-slate-300 text-slate-800 font-bold">
+                  <td className="p-2 border-r border-slate-300 text-slate-800 font-bold">
                     Biaya Konsumsi
                   </td>
-                  <td className="p-3 text-right text-slate-800 font-semibold">
+                  <td className="p-2 text-right text-slate-800 font-semibold">
                     {formatRp(keuanganData[activeSiswa.id]?.konsumsi)}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-3 border-r border-slate-300 text-center text-slate-500 font-medium">
+                  <td className="p-2 border-r border-slate-300 text-center text-slate-500 font-medium">
                     4
                   </td>
-                  <td className="p-3 border-r border-slate-300 text-slate-800 font-bold">
+                  <td className="p-2 border-r border-slate-300 text-slate-800 font-bold">
                     Katering / Makan Siang
                   </td>
-                  <td className="p-3 text-right text-slate-800 font-semibold">
+                  <td className="p-2 text-right text-slate-800 font-semibold">
                     {formatRp(keuanganData[activeSiswa.id]?.makan)}
                   </td>
                 </tr>
@@ -1857,11 +1901,11 @@ export default function NinaProjectApp() {
                 <tr>
                   <td
                     colSpan="2"
-                    className="p-3 border-r border-slate-700 text-right font-black uppercase tracking-widest text-[10px] md:text-xs"
+                    className="p-2 border-r border-slate-700 text-right font-black uppercase tracking-widest text-[10px] md:text-xs"
                   >
                     Total Pembayaran
                   </td>
-                  <td className="p-3 text-right font-black text-base md:text-lg">
+                  <td className="p-2 text-right font-black text-sm md:text-base">
                     {formatRp(
                       (Number(keuanganData[activeSiswa.id]?.infaq) || 0) +
                         (Number(keuanganData[activeSiswa.id]?.cicilan) || 0) +
@@ -1873,27 +1917,28 @@ export default function NinaProjectApp() {
               </tfoot>
             </table>
 
-            <div className="flex justify-end pr-4 md:pr-8">
+            <div className="flex justify-end pr-2 md:pr-4">
               <div className="text-center">
-                <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-widest">
                   Penerima / Admin
                 </p>
-                {/* Tempat Tanda Tangan: Masukkan foto dengan cara uncomment tag <img> di bawah ini */}
-                <div className="w-32 h-20 md:w-40 md:h-24 border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center mb-2 mx-auto rounded overflow-hidden">
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    [Foto TTD]
-                  </span>
-                  {/* <img src="URL_FOTO_TTD_ANDA.png" alt="Tanda Tangan" className="w-full h-full object-contain mix-blend-multiply" /> */}
+                {/* PEMANGGILAN FOTO TANDA TANGAN */}
+                <div className="w-28 h-16 md:w-36 md:h-20 border-none bg-transparent flex items-center justify-center mb-1 mx-auto rounded overflow-hidden">
+                  <img
+                    src="/assets/ttd.png"
+                    alt="Tanda Tangan"
+                    className="w-full h-full object-contain mix-blend-multiply"
+                  />
                 </div>
-                <p className="font-black text-slate-800 underline text-sm md:text-base">
-                  Nina M.
+                <p className="font-black text-slate-800 underline text-xs md:text-sm">
+                  Nina Rahilah S.Pd.
                 </p>
               </div>
             </div>
 
             {keuanganData[activeSiswa.id]?.status === "Sudah" && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-12 opacity-5 pointer-events-none">
-                <span className="text-[6rem] md:text-[8rem] font-black uppercase">
+                <span className="text-[5rem] md:text-[6rem] font-black uppercase">
                   LUNAS
                 </span>
               </div>
