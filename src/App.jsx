@@ -546,66 +546,130 @@ export default function NinaProjectApp() {
         <style
           dangerouslySetInnerHTML={{
             __html: `
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-          
-          @font-face {
-            font-family: 'Bismillah Script';
-            src: url('/fonts/BismillahScript.ttf') format('truetype');
-            font-weight: normal; font-style: normal;
-          }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+    
+    @font-face {
+      font-family: 'Bismillah Script';
+      src: url('/fonts/BismillahScript.ttf') format('truetype');
+      font-weight: normal; font-style: normal;
+    }
 
-          * { font-family: 'Inter', sans-serif; }
-          .font-bismillah { font-family: 'Bismillah Script', cursive; }
+    * { font-family: 'Inter', sans-serif; }
+    .font-bismillah { font-family: 'Bismillah Script', cursive; }
 
-          @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-          .selection-live-bg {
-            background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #fffbeb, #f0fdfa);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
-          }
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .selection-live-bg {
+      background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #fffbeb, #f0fdfa);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+    }
 
-          @keyframes blob1 {
-            0% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
-            33% { transform: translate(30px, -50px) scale(1.1) rotate(120deg); }
-            66% { transform: translate(-20px, 20px) scale(0.9) rotate(240deg); }
-            100% { transform: translate(0px, 0px) scale(1) rotate(360deg); }
-          }
-          @keyframes blob2 {
-            0% { transform: translate(0px, 0px) scale(1) rotate(360deg); }
-            33% { transform: translate(-30px, 50px) scale(1.1) rotate(240deg); }
-            66% { transform: translate(20px, -20px) scale(0.9) rotate(120deg); }
-            100% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
-          }
-          .animate-blob1 { animation: blob1 20s infinite alternate ease-in-out; }
-          .animate-blob2 { animation: blob2 25s infinite alternate ease-in-out; }
+    /* ==========================================
+       LOGIKA PRINT (FIX BLANK, CLEAN & KOP)
+    ========================================== */
+    @media print {
+      /* 1. RESET TOTAL LATAR BELAKANG */
+      /* Kita targetkan semua kontainer utama agar menjadi putih polos */
+      body, 
+      html, 
+      .selection-live-bg, 
+      main, 
+      #root, 
+      .__next {
+        background: white !important;
+        background-image: none !important;
+        background-color: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
 
-          /* PRINT CSS FIX: Anti Blank Putih & Bebas Kertas */
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            #kwitansi-print-area, #kwitansi-print-area * {
-              visibility: visible;
-            }
-            #kwitansi-print-area {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              margin: 0;
-              padding: 0;
-              box-shadow: none !important;
-            }
-            .no-print {
-              display: none !important;
-            }
-            @page { size: auto; margin: 10mm; }
-          }
-        `,
+      /* 2. SEMBUNYIKAN ELEMEN UI & DEKORASI */
+      nav, 
+      .no-print, 
+      button, 
+      .fixed:not(:has(#kwitansi-print-area)), 
+      .animate-blob1, 
+      .animate-blob2,
+      .absolute.inset-0.overflow-hidden {
+        display: none !important;
+      }
+
+      /* 3. SETTING LAPORAN TABEL */
+      main {
+        display: block !important;
+        width: 100% !important;
+        padding: 0 !important;
+      }
+
+      /* Hilangkan efek glassmorphism/transparansi agar tidak berbayang saat di-print */
+      .bg-white\/80, 
+      .bg-white\/90, 
+      .backdrop-blur-xl,
+      .shadow-sm {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+
+      .print-kop-laporan {
+        display: flex !important;
+        border-bottom: 2px solid #000 !important;
+        margin-bottom: 15px !important;
+        padding-bottom: 10px !important;
+      }
+
+      main table {
+        min-width: 100% !important;
+        width: 100% !important;
+        border: 1px solid #000 !important;
+        border-collapse: collapse !important;
+      }
+      
+      main th, main td {
+        border: 1px solid #000 !important;
+        padding: 6px 4px !important;
+        color: black !important;
+        background-color: transparent !important; /* Mencegah warna sel tabel aplikasi ikut terbawa */
+      }
+
+      /* 4. SETTING KHUSUS KWITANSI */
+      body:has(#kwitansi-print-area) main {
+        display: none !important;
+      }
+
+      #kwitansi-print-area {
+        display: block !important;
+        position: relative !important;
+        max-width: 550px !important;
+        margin: 0 auto !important;
+        background: white !important;
+      }
+
+      #kwitansi-print-area table { border: none !important; }
+      #kwitansi-print-area td, #kwitansi-print-area th { border: none !important; }
+      
+      /* Hanya beri border pada tabel rincian biaya di kwitansi */
+      #kwitansi-print-area .border-2 {
+        border: 1.5px solid #000 !important;
+      }
+      #kwitansi-print-area .border-2 td, 
+      #kwitansi-print-area .border-2 th {
+        border: 1px solid #000 !important;
+      }
+
+      /* 5. AKTIFKAN WARNA HANYA UNTUK ELEMEN PENTING */
+      /* Agar logo dan teks berwarna tetap muncul di atas kertas putih */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+    `,
           }}
         />
 
@@ -710,9 +774,39 @@ export default function NinaProjectApp() {
           ))}
         </div>
 
-        {/* --- MAIN CONTENT AREA --- */}
-        <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 no-print">
-          {/* TAB 1: BERANDA */}
+        <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+          {/* --- HEADER KOP LAPORAN (HANYA MUNCUL SAAT PRINT TABEL) --- */}
+          <div className="hidden print-kop-laporan items-center justify-between mb-2 border-b-4 border-double border-slate-800 pb-2">
+            <div className="flex items-center gap-4">
+              <img
+                src="/logo.svg"
+                alt="Logo"
+                className="w-16 h-16 object-contain"
+              />
+              <div>
+                <h1 className="font-bismillah text-4xl text-[#000080] leading-tight">
+                  Nina's Project
+                </h1>
+                <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-[0.3em]">
+                  Manajemen Akademik & Keuangan Siswa
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-lg font-black uppercase tracking-widest text-slate-800">
+                Laporan{" "}
+                {activeTab === "siswa"
+                  ? "Data Siswa"
+                  : activeTab === "nilai"
+                    ? "Rekap Nilai"
+                    : "Keuangan"}
+              </h2>
+              <p className="text-[10px] font-medium text-slate-500 italic">
+                Dicetak pada:{" "}
+                {new Date().toLocaleDateString("id-ID", { dateStyle: "long" })}
+              </p>
+            </div>
+          </div>
           {activeTab === "home" && (
             <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
               {/* Card Kas Elegan */}
@@ -894,7 +988,7 @@ export default function NinaProjectApp() {
 
           {/* --- FILTER BAR & TOMBOL EXPORT/PRINT KETIKA DI TAB DATA --- */}
           {activeTab !== "home" && (
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 p-3 md:p-5 mb-4 md:mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="no-print bg-white/80 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 p-3 md:p-5 mb-4 md:mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-4">
                 <div className="flex gap-3 items-center">
                   <div className="bg-gradient-to-br from-teal-50 to-emerald-50 p-2 md:p-3 rounded-xl md:rounded-2xl text-teal-600 border border-teal-100 shadow-inner">
@@ -996,11 +1090,15 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB 2: DATA SISWA (TABEL KOMPAK - NO SCROLL) */}
+          {/* TAB 2: DATA SISWA */}
           {activeTab === "siswa" && (
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 overflow-hidden animate-in fade-in duration-500">
-              <div className="w-full">
-                <table className="w-full text-left">
+            <div className="bg-white/90 ...">
+              <div className="w-full overflow-x-auto shadow-inner">
+                {" "}
+                {/* Tambah overflow-x-auto */}
+                <table className="w-full min-w-[600px] text-left">
+                  {" "}
+                  {/* Tambah min-w-[600px] */}
                   <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
                       <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 w-8 md:w-12 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest">
@@ -1066,11 +1164,15 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB 3: REKAP NILAI (TABEL KOMPAK - NO SCROLL) */}
+          {/* TAB 3: REKAP NILAI */}
           {activeTab === "nilai" && (
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 overflow-hidden animate-in fade-in duration-500">
-              <div className="w-full">
-                <table className="w-full text-left">
+            <div className="bg-white/90 ...">
+              <div className="w-full overflow-x-auto shadow-inner">
+                {" "}
+                {/* Tambah overflow-x-auto */}
+                <table className="w-full min-w-[850px] text-left">
+                  {" "}
+                  {/* Tambah min-w-[850px] karena kolomnya banyak */}
                   <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest w-6 md:w-10">
@@ -1086,13 +1188,13 @@ export default function NinaProjectApp() {
                         Catatan
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
-                        UH
+                        Ulangan Harian
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Ujian
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
-                        Rata
+                        Rata-Rata
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Ket.
@@ -1183,36 +1285,41 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB 4: KEUANGAN (TABEL KOMPAK - NO SCROLL) */}
+          {/* TAB 4: KEUANGAN */}
           {activeTab === "keuangan" && (
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 overflow-hidden animate-in fade-in duration-500">
-              <div className="w-full">
-                <table className="w-full text-left">
+            <div className="bg-white/90 ...">
+              <div className="w-full overflow-x-auto shadow-inner">
+                {" "}
+                {/* Tambah overflow-x-auto */}
+                <table className="w-full min-w-[1000px] text-left">
+                  {" "}
+                  {/* Tambah min-w-[1000px] agar angka rupiah tidak berantakan */}
+                  {/* CARI BAGIAN THEAD DI TAB KEUANGAN DAN GANTI DENGAN INI */}
                   <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest w-6 md:w-10">
                         No
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Siswa
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Infaq
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Daftar
                         <br className="md:hidden" />
                         Ulang
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Konsum
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Makan
                         <br className="md:hidden" />
                         Siang
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-teal-700 bg-teal-50 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Total
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
@@ -1613,7 +1720,11 @@ export default function NinaProjectApp() {
 
         {/* --- MODAL KWITANSI KOMPAK --- */}
         {modalType === "kwitansi" && activeSiswa && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-300 print:p-0 print:bg-transparent print:static print:block">
+          /* Tambahkan id modal-kwitansi agar CSS bisa mendeteksi modal ini aktif */
+          <div
+            id="modal-container-kwitansi"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-300 print:p-0 print:bg-white print:static print:block"
+          >
             <div className="absolute top-4 right-4 flex flex-wrap gap-2 no-print z-50 justify-end">
               <button
                 onClick={handleDownloadImage}
