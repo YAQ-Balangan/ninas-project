@@ -98,7 +98,7 @@ const EditableCell = ({
       return (
         <select
           autoFocus
-          className="w-full p-1 border-2 border-teal-500 rounded outline-none text-xs text-teal-900 bg-teal-50 shadow-sm min-w-[90px]"
+          className="w-full p-1.5 border-2 border-teal-500 rounded-lg outline-none text-[10px] md:text-xs text-teal-900 bg-white shadow-sm min-w-[70px] md:min-w-[90px]"
           value={val}
           onChange={(e) => setVal(e.target.value)}
           onBlur={triggerSave}
@@ -117,7 +117,7 @@ const EditableCell = ({
       <input
         autoFocus
         type={type}
-        className="w-full p-1 border-2 border-teal-500 rounded outline-none text-xs text-teal-900 bg-teal-50 shadow-sm min-w-[70px]"
+        className="w-full p-1.5 border-2 border-teal-500 rounded-lg outline-none text-[10px] md:text-xs text-teal-900 bg-white shadow-sm min-w-[50px] md:min-w-[70px]"
         value={val}
         onChange={(e) => setVal(e.target.value)}
         onBlur={triggerSave}
@@ -131,13 +131,13 @@ const EditableCell = ({
   if (isCurrency && value) displayValue = formatRp(value);
   if (type === "select" && value === "Sudah") {
     displayValue = (
-      <span className="text-teal-600 flex items-center gap-1 text-[11px]">
+      <span className="text-teal-600 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold">
         <CheckCircle2 size={12} /> Lunas
       </span>
     );
   } else if (type === "select" && value === "Belum") {
     displayValue = (
-      <span className="text-amber-500 flex items-center gap-1 text-[11px]">
+      <span className="text-amber-500 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold">
         <AlertCircle size={12} /> Belum
       </span>
     );
@@ -146,10 +146,10 @@ const EditableCell = ({
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="w-full min-h-[24px] cursor-text hover:bg-teal-50 hover:ring-1 hover:ring-teal-200 rounded px-1 flex items-center transition-colors text-slate-700 text-xs md:text-sm"
+      className="w-full min-h-[24px] cursor-text hover:bg-teal-50/50 hover:ring-1 hover:ring-teal-200 rounded-md px-1 flex items-center transition-all duration-200 text-slate-700 text-[10px] md:text-sm font-medium"
     >
       {displayValue || (
-        <span className="text-slate-300 italic text-[10px] md:text-xs">
+        <span className="text-slate-300 italic text-[9px] md:text-xs">
           {placeholder}
         </span>
       )}
@@ -161,7 +161,6 @@ const EditableCell = ({
 // KOMPONEN UTAMA NINA'S PROJECT
 // ==========================================
 export default function NinaProjectApp() {
-  // --- CORE STATE ---
   const [activeTab, setActiveTab] = useState("home");
   const [modalType, setModalType] = useState(null);
 
@@ -169,9 +168,8 @@ export default function NinaProjectApp() {
   const [filterKelas, setFilterKelas] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [splashState, setSplashState] = useState("entering"); // 'entering', 'exiting', 'hidden'
+  const [splashState, setSplashState] = useState("entering");
 
-  // --- STATE DATA ---
   const [kelasOptions, setKelasOptions] = useState([]);
   const [siswaData, setSiswaData] = useState([]);
   const [nilaiData, setNilaiData] = useState({});
@@ -180,22 +178,15 @@ export default function NinaProjectApp() {
   const [formData, setFormData] = useState({});
   const [activeSiswa, setActiveSiswa] = useState(null);
 
-  // ==========================================
-  // 1. EFEK SPLASH SCREEN (Tetesan Air)
-  // ==========================================
   useEffect(() => {
-    // Splash screen tampil 2.5 detik, lalu transisi memudar selama 0.5 detik
-    const t1 = setTimeout(() => setSplashState("exiting"), 2500);
-    const t2 = setTimeout(() => setSplashState("hidden"), 3000);
+    const t1 = setTimeout(() => setSplashState("exiting"), 2000);
+    const t2 = setTimeout(() => setSplashState("hidden"), 2800);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
   }, []);
 
-  // ==========================================
-  // 2. SISTEM ROUTING BACK BUTTON (ANTI-KELUAR APLIKASI)
-  // ==========================================
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace("#", "");
@@ -203,7 +194,6 @@ export default function NinaProjectApp() {
         window.location.replace("#home");
         return;
       }
-      // Membaca Format URL -> #tab/modal (Contoh: #siswa/kelas)
       const parts = hash.split("/");
       const tab = parts[0] || "home";
       const modal = parts[1] || null;
@@ -212,25 +202,19 @@ export default function NinaProjectApp() {
       setModalType(modal);
     };
 
-    // Dengarkan saat user mencet tombol Back di HP
     window.addEventListener("hashchange", handleHashChange);
-
-    // Setup awal saat aplikasi baru dibuka
     if (!window.location.hash) {
       window.location.replace("#home");
     } else {
       handleHashChange();
     }
-
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  // Fungsi Buka Halaman (Tab)
   const navToTab = (tab) => {
     window.location.hash = tab;
   };
 
-  // Fungsi Buka Modal (Disimpan di History agar bisa di-Back)
   const openModal = (type, data = null, existData = null) => {
     if (type === "siswa") {
       setFormData(
@@ -248,20 +232,13 @@ export default function NinaProjectApp() {
     } else if (type === "kwitansi") {
       setActiveSiswa(data);
     }
-
-    // Mengubah URL memicu useEffect di atas (Membuka Modal)
     window.location.hash = `${activeTab}/${type}`;
   };
 
-  // Fungsi Tutup Modal (Menghapus dari URL, mengembalikan ke Tab)
   const closeModal = () => {
-    // Replace URL agar tidak menambah tumpukan History maju-mundur
     window.location.replace(`#${activeTab}`);
   };
 
-  // ==========================================
-  // FETCH DATA SUPABASE
-  // ==========================================
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -297,7 +274,6 @@ export default function NinaProjectApp() {
     fetchData();
   }, []);
 
-  // --- HANDLERS INLINE EDIT ---
   const handleInlineSiswa = async (id, key, val) => {
     setSiswaData((prev) =>
       prev.map((s) => (s.id === id ? { ...s, [key]: val } : s)),
@@ -326,7 +302,6 @@ export default function NinaProjectApp() {
     await supabase.from("keuangan").upsert({ siswa_id: siswaId, ...newData });
   };
 
-  // --- HANDLERS SAVE & DELETE ---
   const handleSaveData = async (e) => {
     e.preventDefault();
     try {
@@ -349,13 +324,11 @@ export default function NinaProjectApp() {
         } else {
           setSiswaData([...siswaData, formData]);
         }
-        await supabase
-          .from("siswa")
-          .upsert({
-            id: formData.id,
-            nama: formData.nama,
-            kelas: formData.kelas,
-          });
+        await supabase.from("siswa").upsert({
+          id: formData.id,
+          nama: formData.nama,
+          kelas: formData.kelas,
+        });
       } else if (modalType === "nilai") {
         setNilaiData({ ...nilaiData, [activeSiswa.id]: formData });
         await supabase.from("nilai").upsert({
@@ -382,7 +355,7 @@ export default function NinaProjectApp() {
       console.error("Gagal menyimpan ke database:", error);
       alert("Terjadi kesalahan saat menyimpan data.");
     }
-    closeModal(); // Menutup modal menggunakan sistem routing baru
+    closeModal();
   };
 
   const handleDeleteSiswa = async (id) => {
@@ -401,7 +374,6 @@ export default function NinaProjectApp() {
     return index !== -1 ? index + 1 : 1;
   };
 
-  // --- SCREENSHOT FEATURE ---
   const handleDownloadImage = async () => {
     const element = document.getElementById("kwitansi-print-area");
     if (!element) return;
@@ -421,14 +393,13 @@ export default function NinaProjectApp() {
     } catch (err) {
       console.error("Gagal memproses gambar:", err);
       alert(
-        "Gagal memproses gambar. Pastikan npm install html-to-image berhasil dijalankan.",
+        "Gagal memproses gambar. Pastikan module html-to-image terinstall.",
       );
     } finally {
       setIsCapturing(false);
     }
   };
 
-  // --- FILTER & CALCULATIONS ---
   const filteredSiswa = useMemo(() => {
     return siswaData.filter((s) => {
       const namaAman = String(s.nama || "").toLowerCase();
@@ -458,7 +429,6 @@ export default function NinaProjectApp() {
     return { grandTotalKeuangan: total, totalCash: cash, totalTransfer: tf };
   }, [siswaData, keuanganData]);
 
-  // --- EXPORT HANDLERS ---
   const handleExportNilai = () => {
     const rows = [
       [
@@ -534,10 +504,9 @@ export default function NinaProjectApp() {
     exportToCSV("Rekap_Keuangan_Ninas_Project", rows);
   };
 
-  // Tampilkan Loading State saat pertama kali buka
   if (isLoading && splashState === "hidden") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-teal-600 flex-col gap-3">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-teal-600 flex-col gap-3 selection-live-bg">
         <div className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div>
         <p className="font-bold text-sm">Menyinkronkan dengan Database...</p>
       </div>
@@ -547,27 +516,23 @@ export default function NinaProjectApp() {
   return (
     <>
       {/* ==========================================
-          KOMPONEN SPLASH SCREEN (Tetesan Air)
+          KOMPONEN SPLASH SCREEN ELEGAN
       ========================================== */}
       {splashState !== "hidden" && (
         <div
-          className={`fixed inset-0 z-[999] bg-slate-50 flex flex-col items-center justify-center transition-opacity duration-500 
-          ${splashState === "exiting" ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+          className={`fixed inset-0 z-[999] bg-[#f8fafc] flex flex-col items-center justify-center transition-all duration-700 ease-in-out 
+          ${splashState === "exiting" ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"}`}
         >
-          <div className="relative flex flex-col items-center justify-center mb-4">
-            {/* Animasi Gelombang Air / Ripple */}
-            <div className="absolute w-24 h-24 bg-teal-400 rounded-full animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite] opacity-40"></div>
-            {/* Animasi Jatuh Logo */}
-            <img
-              src="/logo.svg"
-              alt="Logo Nina"
-              className="w-24 h-24 relative z-10 animate-[bounce_1s_infinite] drop-shadow-2xl"
-            />
-          </div>
-          <h1 className="mt-8 font-bismillah text-4xl md:text-5xl text-[#000080] tracking-widest animate-pulse">
+          <img
+            src="/logo.svg"
+            alt="Logo Nina"
+            className="w-24 h-24 md:w-32 md:h-32 object-contain mb-8 drop-shadow-xl animate-[pulse_3s_ease-in-out_infinite]"
+          />
+          <h1 className="font-bismillah text-4xl md:text-5xl text-[#000080] tracking-widest drop-shadow-sm">
             Nina's Project
           </h1>
-          <p className="text-teal-600 text-[10px] md:text-xs mt-2 font-bold tracking-[0.3em] uppercase">
+          <div className="w-10 h-1 bg-teal-500 rounded-full mt-4 mb-3 opacity-70"></div>
+          <p className="text-slate-500 text-[10px] md:text-xs uppercase tracking-[0.3em] font-semibold">
             Manajemen Akademik
           </p>
         </div>
@@ -576,11 +541,12 @@ export default function NinaProjectApp() {
       {/* ==========================================
           APLIKASI UTAMA
       ========================================== */}
-      <div className="min-h-screen bg-slate-50 text-slate-800 selection:bg-teal-200 pb-16 md:pb-0">
+      <div className="min-h-screen text-slate-800 pb-16 md:pb-0 relative selection-live-bg overflow-x-hidden z-0 font-sans selection:bg-teal-200 selection:text-teal-900">
+        {/* CSS KHUSUS ANIMASI BACKGROUND & PRINT FIX */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
-          @import url('https://fonts.googleapis.com/css2?family=Cantora+One&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
           
           @font-face {
             font-family: 'Bismillah Script';
@@ -588,56 +554,100 @@ export default function NinaProjectApp() {
             font-weight: normal; font-style: normal;
           }
 
-          * { font-family: 'Cantora One', sans-serif; }
+          * { font-family: 'Inter', sans-serif; }
           .font-bismillah { font-family: 'Bismillah Script', cursive; }
 
+          @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .selection-live-bg {
+            background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #fffbeb, #f0fdfa);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+          }
+
+          @keyframes blob1 {
+            0% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
+            33% { transform: translate(30px, -50px) scale(1.1) rotate(120deg); }
+            66% { transform: translate(-20px, 20px) scale(0.9) rotate(240deg); }
+            100% { transform: translate(0px, 0px) scale(1) rotate(360deg); }
+          }
+          @keyframes blob2 {
+            0% { transform: translate(0px, 0px) scale(1) rotate(360deg); }
+            33% { transform: translate(-30px, 50px) scale(1.1) rotate(240deg); }
+            66% { transform: translate(20px, -20px) scale(0.9) rotate(120deg); }
+            100% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
+          }
+          .animate-blob1 { animation: blob1 20s infinite alternate ease-in-out; }
+          .animate-blob2 { animation: blob2 25s infinite alternate ease-in-out; }
+
+          /* PRINT CSS FIX: Anti Blank Putih & Bebas Kertas */
           @media print {
-            body * { visibility: hidden !important; }
-            .print-mode, .print-mode * { visibility: visible !important; }
-            .print-mode { 
-              position: absolute; 
-              left: 0; 
-              top: 0; 
-              width: 100%; 
-              margin: 0; 
-              padding: 0; 
+            body * {
+              visibility: hidden;
+            }
+            #kwitansi-print-area, #kwitansi-print-area * {
+              visibility: visible;
+            }
+            #kwitansi-print-area {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              margin: 0;
+              padding: 0;
               box-shadow: none !important;
             }
-            .no-print { display: none !important; }
+            .no-print {
+              display: none !important;
+            }
             @page { size: auto; margin: 10mm; }
           }
         `,
           }}
         />
 
-        {/* --- TOP NAVBAR --- */}
-        <nav className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-40 no-print">
-          <div className="max-w-7xl mx-auto px-3 md:px-6">
+        {/* ELEMEN BACKGROUND BLOBS MELAYANG */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1] opacity-70 no-print">
+          <div className="absolute -top-[10%] -left-[10%] w-[50vw] h-[50vw] bg-emerald-300/30 rounded-[40%] blur-[80px] animate-blob1" />
+          <div className="absolute top-[40%] -right-[10%] w-[60vw] h-[60vw] bg-amber-300/20 rounded-[45%] blur-[80px] animate-blob2" />
+          <div
+            className="absolute -bottom-[20%] left-[20%] w-[40vw] h-[40vw] bg-teal-300/30 rounded-full blur-[100px] animate-blob1"
+            style={{ animationDelay: "-5s" }}
+          />
+        </div>
+
+        {/* --- TOP NAVBAR GLASSMORPHISM --- */}
+        <nav className="bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-sm sticky top-0 z-40 no-print">
+          <div className="max-w-7xl mx-auto px-4 md:px-6">
             <div className="flex justify-between items-center h-14 md:h-16">
               <div
-                className="flex items-center gap-2 md:gap-3 cursor-pointer"
+                className="flex items-center gap-2 cursor-pointer group"
                 onClick={() => navToTab("home")}
               >
                 <img
                   src="/logo.svg"
                   alt="Logo Nina"
-                  className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-sm"
+                  className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-sm group-hover:scale-105 transition-transform"
                 />
-                <span className="font-bismillah text-2xl md:text-3xl text-[#000080] drop-shadow-sm pt-2">
+                <span className="font-bismillah text-xl md:text-3xl text-[#000080] drop-shadow-sm pt-1.5">
                   Nina's Project
                 </span>
               </div>
-              <div className="hidden md:flex space-x-1">
+              <div className="hidden md:flex space-x-2 bg-slate-50/50 p-1.5 rounded-xl border border-white/60">
                 {["home", "siswa", "nilai", "keuangan"].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => navToTab(tab)}
-                    className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all text-sm capitalize ${activeTab === tab ? "bg-teal-50 text-teal-700 shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}
+                    className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all duration-300 text-[11px] md:text-xs font-semibold capitalize tracking-wide
+                    ${activeTab === tab ? "bg-white text-teal-700 shadow-[0_4px_15px_rgba(20,184,166,0.15)]" : "text-slate-500 hover:bg-white/60 hover:text-slate-700"}`}
                   >
-                    {tab === "home" && <Home size={16} />}
-                    {tab === "siswa" && <Users size={16} />}
-                    {tab === "nilai" && <GraduationCap size={16} />}
-                    {tab === "keuangan" && <Wallet size={16} />}
+                    {tab === "home" && <Home size={14} />}
+                    {tab === "siswa" && <Users size={14} />}
+                    {tab === "nilai" && <GraduationCap size={14} />}
+                    {tab === "keuangan" && <Wallet size={14} />}
                     {tab === "home"
                       ? "Beranda"
                       : tab === "siswa"
@@ -649,7 +659,7 @@ export default function NinaProjectApp() {
                 ))}
               </div>
               <div className="md:hidden flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center border border-slate-200 text-slate-600">
+                <div className="w-8 h-8 bg-white/80 rounded-full flex items-center justify-center border border-white/60 shadow-sm text-slate-600">
                   <Settings className="w-4 h-4" />
                 </div>
               </div>
@@ -657,16 +667,16 @@ export default function NinaProjectApp() {
           </div>
         </nav>
 
-        {/* --- BOTTOM NAVIGATION BAR (Mobile) --- */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around items-center pt-1.5 pb-1.5 z-40 px-1 no-print shadow-[0_-4px_15px_rgba(0,0,0,0.03)]">
+        {/* --- BOTTOM NAVIGATION BAR (Mobile Glassmorphism) --- */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-white/60 flex justify-around items-center pt-1.5 pb-1.5 z-40 px-2 no-print shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
           {["home", "siswa", "nilai", "keuangan"].map((tab) => (
             <button
               key={tab}
               onClick={() => navToTab(tab)}
-              className={`flex flex-col items-center p-1.5 rounded-lg min-w-[60px] ${activeTab === tab ? "text-teal-600" : "text-slate-400 hover:text-slate-600"}`}
+              className={`flex flex-col items-center p-1.5 rounded-xl min-w-[64px] transition-all duration-300 ${activeTab === tab ? "text-teal-700 scale-105" : "text-slate-400 hover:text-slate-600"}`}
             >
               <div
-                className={`${activeTab === tab ? "bg-teal-50 p-1 rounded-md mb-0.5" : "mb-1"}`}
+                className={`transition-all duration-300 ${activeTab === tab ? "bg-teal-50 p-1.5 rounded-lg mb-0.5 shadow-sm" : "mb-1"}`}
               >
                 {tab === "home" && (
                   <Home
@@ -693,7 +703,7 @@ export default function NinaProjectApp() {
                   />
                 )}
               </div>
-              <span className="text-[9px] capitalize">
+              <span className="text-[9px] font-semibold capitalize tracking-wide">
                 {tab === "home" ? "Beranda" : tab}
               </span>
             </button>
@@ -701,132 +711,148 @@ export default function NinaProjectApp() {
         </div>
 
         {/* --- MAIN CONTENT AREA --- */}
-        <main className="max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 no-print">
+        <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 no-print">
           {/* TAB 1: BERANDA */}
           {activeTab === "home" && (
-            <div className="space-y-4 md:space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-2xl p-4 md:p-6 text-white shadow-lg relative overflow-hidden">
-                <div className="absolute -top-12 -right-12 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
+            <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+              {/* Card Kas Elegan */}
+              <div className="bg-gradient-to-br from-teal-500/95 to-emerald-700/95 backdrop-blur-xl rounded-3xl p-5 md:p-8 text-white shadow-[0_20px_40px_rgba(20,184,166,0.2)] border border-white/20 relative overflow-hidden">
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-900/20 rounded-full blur-3xl"></div>
+
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-8 relative z-10">
                   <div>
-                    <p className="text-teal-100 text-xs mb-0.5 flex items-center gap-1.5">
-                      <TrendingUp size={14} /> Grand Total Dana
+                    <p className="text-teal-100 text-xs md:text-sm font-medium mb-1 flex items-center gap-2 tracking-wide uppercase">
+                      <TrendingUp size={16} /> Grand Total Dana
                     </p>
-                    <h2 className="text-3xl md:text-4xl tracking-tight leading-none">
+                    <h2 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-md">
                       {formatRp(grandTotalKeuangan)}
                     </h2>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/20 backdrop-blur-sm">
-                      <p className="text-teal-100 text-[9px] uppercase tracking-widest mb-0.5">
+                  <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
+                    <div className="bg-white/10 p-3 md:p-4 rounded-2xl border border-white/20 backdrop-blur-md shadow-inner">
+                      <p className="text-teal-100 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
                         Total Cash
                       </p>
-                      <p className="text-base text-white">
+                      <p className="text-base md:text-xl font-bold text-white tracking-wide">
                         {formatRp(totalCash)}
                       </p>
                     </div>
-                    <div className="bg-white/10 p-3 rounded-xl border border-white/20 backdrop-blur-sm">
-                      <p className="text-teal-100 text-[9px] uppercase tracking-widest mb-0.5">
+                    <div className="bg-white/10 p-3 md:p-4 rounded-2xl border border-white/20 backdrop-blur-md shadow-inner">
+                      <p className="text-teal-100 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
                         Total Transfer
                       </p>
-                      <p className="text-base text-white">
+                      <p className="text-base md:text-xl font-bold text-white tracking-wide">
                         {formatRp(totalTransfer)}
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-4 border-t border-teal-400/30 pt-3 mt-4">
+                <div className="flex gap-6 border-t border-teal-400/30 pt-4 mt-5 relative z-10">
                   <div>
-                    <p className="text-teal-100 text-[9px] uppercase tracking-widest mb-0.5">
+                    <p className="text-teal-100 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
                       Jumlah Anak
                     </p>
-                    <p className="text-sm">{siswaData.length} Siswa</p>
+                    <p className="text-sm md:text-base font-bold">
+                      {siswaData.length} Siswa
+                    </p>
                   </div>
                   <div>
-                    <p className="text-teal-100 text-[9px] uppercase tracking-widest mb-0.5">
-                      Total Kelas
+                    <p className="text-teal-100 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
+                      Kategori Kelas
                     </p>
-                    <p className="text-sm">{kelasOptions.length} Kategori</p>
+                    <p className="text-sm md:text-base font-bold">
+                      {kelasOptions.length} Tingkat
+                    </p>
                   </div>
                 </div>
               </div>
 
+              {/* Menu Cepat Elegan (Hover Effects) */}
               <div>
-                <h3 className="text-xs text-slate-500 uppercase tracking-widest mb-2.5 px-1">
+                <h3 className="text-[11px] md:text-sm text-slate-500 font-bold uppercase tracking-[0.2em] mb-4 pl-2">
                   Menu Cepat
                 </h3>
-                <div className="grid grid-cols-4 gap-3 max-w-md md:max-w-2xl mx-auto md:mx-0">
+                <div className="grid grid-cols-4 gap-3 md:gap-6 max-w-lg md:max-w-none mx-auto">
                   <button
                     onClick={() => openModal("siswa")}
-                    className="flex flex-col items-center gap-2 active:scale-95"
+                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(20,184,166,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
                   >
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center text-teal-600">
-                      <UserPlus size={24} />
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-teal-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-teal-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <UserPlus className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <span className="text-[9px] md:text-xs text-slate-600 text-center">
+                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Siswa
-                      <br />
+                      <br className="md:hidden" />
                       Baru
                     </span>
                   </button>
+
                   <button
                     onClick={() => navToTab("keuangan")}
-                    className="flex flex-col items-center gap-2 active:scale-95"
+                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(245,158,11,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
                   >
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center text-amber-500">
-                      <Banknote size={24} />
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-amber-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <Banknote className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <span className="text-[9px] md:text-xs text-slate-600 text-center">
+                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Input
-                      <br />
+                      <br className="md:hidden" />
                       Uang
                     </span>
                   </button>
+
                   <button
                     onClick={() => navToTab("nilai")}
-                    className="flex flex-col items-center gap-2 active:scale-95"
+                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(59,130,246,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
                   >
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center text-blue-500">
-                      <FileText size={24} />
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-blue-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <FileText className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <span className="text-[9px] md:text-xs text-slate-600 text-center">
+                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Input
-                      <br />
+                      <br className="md:hidden" />
                       Nilai
                     </span>
                   </button>
+
                   <button
                     onClick={() => navToTab("keuangan")}
-                    className="flex flex-col items-center gap-2 active:scale-95"
+                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(244,63,94,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
                   >
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center text-rose-500">
-                      <ReceiptText size={24} />
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-rose-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-rose-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <ReceiptText className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
-                    <span className="text-[9px] md:text-xs text-slate-600 text-center">
+                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Cetak
-                      <br />
+                      <br className="md:hidden" />
                       Kwitansi
                     </span>
                   </button>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-xs text-slate-800 uppercase tracking-wide">
-                    Siswa Terdaftar Baru
+              {/* List Pendaftar */}
+              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 md:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xs md:text-sm text-slate-800 font-bold uppercase tracking-wider">
+                    Pendaftar Terbaru
                   </h3>
                   <button
                     onClick={() => navToTab("siswa")}
-                    className="text-teal-600 text-[10px] uppercase tracking-wider"
+                    className="text-teal-600 font-bold text-[10px] md:text-xs uppercase tracking-wider hover:underline"
                   >
                     Lihat Semua
                   </button>
                 </div>
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {siswaData.length === 0 ? (
-                    <p className="text-center text-slate-400 text-xs py-3">
-                      Belum ada siswa terdaftar.
+                    <p className="text-center text-slate-400 text-xs py-6 font-medium">
+                      Belum ada data siswa.
                     </p>
                   ) : (
                     siswaData
@@ -835,18 +861,18 @@ export default function NinaProjectApp() {
                       .map((s) => (
                         <div
                           key={s.id}
-                          className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50/50"
+                          className="flex items-center gap-3 md:gap-4 p-2 md:p-3 bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow"
                         >
-                          <div className="w-9 h-9 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center text-sm">
+                          <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-teal-100 to-emerald-100 text-teal-700 rounded-xl flex items-center justify-center text-base md:text-lg font-black shadow-inner">
                             {String(s.nama || "")
                               .charAt(0)
                               .toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-slate-800 truncate text-xs">
+                            <p className="text-slate-800 font-bold truncate text-xs md:text-sm">
                               {s.nama}
                             </p>
-                            <p className="text-[10px] text-slate-500">
+                            <p className="text-[9px] md:text-[11px] font-semibold text-slate-400 tracking-wide uppercase mt-0.5">
                               {s.kelas}
                             </p>
                           </div>
@@ -854,7 +880,7 @@ export default function NinaProjectApp() {
                             onClick={() =>
                               openModal("keuangan", s, keuanganData[s.id] || {})
                             }
-                            className="px-2.5 py-1.5 bg-white text-teal-600 rounded-lg text-[10px] shadow-sm"
+                            className="px-3 py-1.5 md:px-4 md:py-2 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-lg md:rounded-xl text-[9px] md:text-[11px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
                           >
                             Bayar
                           </button>
@@ -866,27 +892,28 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* --- FILTER BAR --- */}
+          {/* --- FILTER BAR & TOMBOL EXPORT/PRINT KETIKA DI TAB DATA --- */}
           {activeTab !== "home" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 md:p-4 mb-4">
-              <div className="flex flex-col md:flex-row justify-between md:items-center gap-3">
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 p-3 md:p-5 mb-4 md:mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-4">
                 <div className="flex gap-3 items-center">
-                  <div className="bg-teal-50 p-2.5 rounded-xl text-teal-600 border border-teal-100">
+                  <div className="bg-gradient-to-br from-teal-50 to-emerald-50 p-2 md:p-3 rounded-xl md:rounded-2xl text-teal-600 border border-teal-100 shadow-inner">
                     {activeTab === "siswa" && <Users size={20} />}
                     {activeTab === "nilai" && <FileText size={20} />}
                     {activeTab === "keuangan" && <Wallet size={20} />}
                   </div>
                   <div>
-                    <h2 className="text-base text-slate-800 capitalize leading-tight">
+                    <h2 className="text-sm md:text-xl font-black text-slate-800 capitalize tracking-tight">
                       Manajemen {activeTab}
                     </h2>
-                    <p className="text-[10px] text-slate-500">
-                      Total {filteredSiswa.length} data
+                    <p className="text-[9px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
+                      Total {filteredSiswa.length} Data
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative flex-1 md:w-40">
+
+                <div className="flex flex-wrap items-center gap-1.5 md:gap-2.5">
+                  <div className="relative flex-1 md:w-48">
                     <Search
                       className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
                       size={14}
@@ -894,13 +921,14 @@ export default function NinaProjectApp() {
                     <input
                       type="text"
                       placeholder="Cari nama..."
-                      className="w-full pl-8 pr-3 py-1.5 bg-slate-50 rounded-lg text-xs outline-none focus:border-teal-500"
+                      className="w-full pl-8 pr-3 py-1.5 md:py-2 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-medium border border-slate-200 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 transition-all shadow-sm"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
                   </div>
+
                   <select
-                    className="py-1.5 px-2 bg-slate-50 rounded-lg text-xs outline-none text-slate-700"
+                    className="py-1.5 md:py-2 px-2 md:px-3 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-semibold border border-slate-200 outline-none text-slate-700 shadow-sm"
                     value={filterKelas}
                     onChange={(e) => setFilterKelas(e.target.value)}
                   >
@@ -911,67 +939,94 @@ export default function NinaProjectApp() {
                       </option>
                     ))}
                   </select>
+
                   {activeTab === "siswa" && (
                     <>
                       <button
                         onClick={() => openModal("kelas")}
-                        className="px-2.5 py-1.5 bg-slate-100 text-slate-700 rounded-lg text-[11px] flex items-center gap-1.5"
+                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 font-bold rounded-lg md:rounded-xl text-[9px] md:text-[11px] tracking-wide uppercase flex items-center gap-1 md:gap-1.5 shadow-sm transition-colors"
                       >
-                        <Plus size={14} /> Kelas
+                        <Plus size={12} /> Kelas
                       </button>
                       <button
                         onClick={() => openModal("siswa")}
-                        className="px-2.5 py-1.5 bg-teal-600 text-white rounded-lg text-[11px] flex items-center gap-1.5 shadow-sm"
+                        className="px-2 py-1.5 md:px-3 md:py-2 bg-teal-600 text-white font-bold rounded-lg md:rounded-xl text-[9px] md:text-[11px] tracking-wide uppercase flex items-center gap-1 md:gap-1.5 shadow-md hover:bg-teal-700 transition-colors"
                       >
-                        <Plus size={14} /> Siswa
+                        <Plus size={12} /> Siswa
                       </button>
                     </>
                   )}
-                  {(activeTab === "nilai" || activeTab === "keuangan") && (
-                    <button
-                      onClick={
-                        activeTab === "nilai"
-                          ? handleExportNilai
-                          : handleExportKeuangan
-                      }
-                      className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-[11px] flex items-center gap-1.5 shadow-sm"
-                    >
-                      <Download size={14} /> Excel
-                    </button>
+
+                  {/* KUMPULAN TOMBOL EXPORT & PRINT */}
+                  {(activeTab === "nilai" ||
+                    activeTab === "keuangan" ||
+                    activeTab === "siswa") && (
+                    <div className="flex items-center gap-1 md:gap-2 ml-auto md:ml-2 bg-slate-50 p-1 rounded-lg md:rounded-xl border border-slate-200">
+                      <button
+                        onClick={() => window.print()}
+                        title="Simpan sebagai PDF"
+                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 md:gap-1.5 shadow-sm transition-all"
+                      >
+                        <FileText size={12} /> PDF
+                      </button>
+
+                      <button
+                        onClick={() => window.print()}
+                        title="Cetak Tabel"
+                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-teal-600 hover:bg-teal-50 hover:text-teal-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 md:gap-1.5 shadow-sm transition-all"
+                      >
+                        <Printer size={12} /> Print
+                      </button>
+
+                      <button
+                        onClick={
+                          activeTab === "nilai"
+                            ? handleExportNilai
+                            : handleExportKeuangan
+                        }
+                        title="Download file Excel"
+                        className="px-2 py-1.5 md:px-3 md:py-2 bg-slate-800 text-white hover:bg-slate-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 md:gap-1.5 shadow-md transition-all"
+                      >
+                        <Download size={12} /> Excel
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 2: DATA SISWA */}
+          {/* TAB 2: DATA SISWA (TABEL KOMPAK - NO SCROLL) */}
           {activeTab === "siswa" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto w-full">
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 overflow-hidden animate-in fade-in duration-500">
+              <div className="w-full">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-3 text-slate-500 w-12 text-center text-xs uppercase tracking-wide">
+                      <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 w-8 md:w-12 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest">
                         No
                       </th>
-                      <th className="px-4 py-3 text-slate-500 text-xs uppercase tracking-wide">
+                      <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest">
                         Nama Lengkap
                       </th>
-                      <th className="px-4 py-3 text-slate-500 text-xs uppercase tracking-wide w-48">
+                      <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest w-24 md:w-48">
                         Kelas
                       </th>
-                      <th className="px-4 py-3 text-slate-500 text-center w-28 text-xs uppercase tracking-wide">
+                      <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 text-center w-16 md:w-32 text-[10px] md:text-xs font-bold uppercase tracking-widest no-print">
                         Aksi
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredSiswa.map((s, idx) => (
-                      <tr key={s.id} className="hover:bg-teal-50/40">
-                        <td className="px-4 py-2.5 text-slate-500 text-center text-xs">
+                      <tr
+                        key={s.id}
+                        className="hover:bg-teal-50/30 transition-colors"
+                      >
+                        <td className="px-2 py-2 md:px-5 md:py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold">
                           {idx + 1}
                         </td>
-                        <td className="px-4 py-2.5 text-slate-800">
+                        <td className="px-2 py-2 md:px-5 md:py-3 text-slate-800 font-semibold">
                           <EditableCell
                             value={s.nama}
                             onSave={(val) =>
@@ -979,7 +1034,7 @@ export default function NinaProjectApp() {
                             }
                           />
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-2 py-2 md:px-5 md:py-3">
                           <EditableCell
                             type="select"
                             options={kelasOptions}
@@ -989,18 +1044,18 @@ export default function NinaProjectApp() {
                             }
                           />
                         </td>
-                        <td className="px-4 py-2.5 text-center">
+                        <td className="px-2 py-2 md:px-5 md:py-3 text-center no-print">
                           <button
                             onClick={() => openModal("siswa", s)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                            className="p-1 md:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md md:rounded-lg mx-0.5 md:mx-1 transition-colors"
                           >
-                            <Edit size={14} />
+                            <Edit size={12} className="md:w-3.5 md:h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteSiswa(s.id)}
-                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"
+                            className="p-1 md:p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md md:rounded-lg mx-0.5 md:mx-1 transition-colors"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={12} className="md:w-3.5 md:h-3.5" />
                           </button>
                         </td>
                       </tr>
@@ -1011,36 +1066,36 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB 3: REKAP NILAI */}
+          {/* TAB 3: REKAP NILAI (TABEL KOMPAK - NO SCROLL) */}
           {activeTab === "nilai" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden print-mode">
-              <div className="overflow-x-auto w-full">
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 overflow-hidden animate-in fade-in duration-500">
+              <div className="w-full">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
-                      <th className="px-3 py-3 text-slate-500 sticky left-0 bg-slate-50 text-center text-xs uppercase z-10">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest w-6 md:w-10">
                         No
                       </th>
-                      <th className="px-3 py-3 text-slate-500 sticky left-10 bg-slate-50 text-xs uppercase z-10 shadow-[2px_0_5px_rgba(0,0,0,0.03)]">
-                        Nama Siswa
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                        Siswa
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-center text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Hafalan
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-center text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Catatan
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-center text-xs uppercase">
-                        Ulangan
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                        UH
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-center text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Ujian
                       </th>
-                      <th className="px-3 py-3 text-teal-600 bg-teal-50/50 text-center text-xs uppercase">
-                        Rata-rata
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                        Rata
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-xs uppercase">
-                        Keterangan
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                        Ket.
                       </th>
                     </tr>
                   </thead>
@@ -1054,17 +1109,20 @@ export default function NinaProjectApp() {
                           (Number(n.ujian) || 0)) /
                         4;
                       return (
-                        <tr key={s.id} className="hover:bg-slate-50">
-                          <td className="px-3 py-2.5 text-slate-500 sticky left-0 bg-white text-center text-xs">
+                        <tr
+                          key={s.id}
+                          className="hover:bg-teal-50/30 transition-colors"
+                        >
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold">
                             {idx + 1}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-800 sticky left-10 bg-white shadow-[2px_0_5px_rgba(0,0,0,0.01)] text-xs">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-slate-800 text-[10px] md:text-xs font-bold leading-tight">
                             {s.nama} <br />
-                            <span className="text-[9px] text-slate-400 uppercase">
+                            <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
                               {s.kelas}
                             </span>
                           </td>
-                          <td className="px-3 py-2.5 text-center">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
                             <EditableCell
                               type="number"
                               value={n.hafalan}
@@ -1074,7 +1132,7 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-center">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
                             <EditableCell
                               type="number"
                               value={n.catatan}
@@ -1084,7 +1142,7 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-center">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
                             <EditableCell
                               type="number"
                               value={n.ulangan}
@@ -1094,7 +1152,7 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-center">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
                             <EditableCell
                               type="number"
                               value={n.ujian}
@@ -1104,16 +1162,16 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-teal-700 bg-teal-50/30 text-center text-xs">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-teal-700 bg-teal-50/50 text-center text-[10px] md:text-xs font-bold">
                             {rata > 0 ? rata.toFixed(1) : "-"}
                           </td>
-                          <td className="px-3 py-2.5">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3">
                             <EditableCell
                               value={n.keterangan}
                               onSave={(val) =>
                                 handleInlineNilai(s.id, "keterangan", val)
                               }
-                              placeholder="Catatan..."
+                              placeholder="..."
                             />
                           </td>
                         </tr>
@@ -1125,41 +1183,45 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB 4: KEUANGAN */}
+          {/* TAB 4: KEUANGAN (TABEL KOMPAK - NO SCROLL) */}
           {activeTab === "keuangan" && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto w-full">
-                <table className="w-full text-left text-sm whitespace-nowrap">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 overflow-hidden animate-in fade-in duration-500">
+              <div className="w-full">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
-                      <th className="px-3 py-3 text-slate-500 sticky left-0 bg-slate-50 z-10 text-center text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest w-6 md:w-10">
                         No
                       </th>
-                      <th className="px-3 py-3 text-slate-500 sticky left-10 bg-slate-50 z-10 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Siswa
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-right text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Infaq
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-right text-xs uppercase">
-                        Daftar Ulang
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                        Daftar
+                        <br className="md:hidden" />
+                        Ulang
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-right text-xs uppercase">
-                        Konsumsi
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                        Konsum
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-right text-xs uppercase">
-                        Makan Siang
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                        Makan
+                        <br className="md:hidden" />
+                        Siang
                       </th>
-                      <th className="px-3 py-3 text-teal-600 bg-teal-50/50 text-right text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-teal-700 bg-teal-50 text-right text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Total
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-center text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Metode
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-center text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Status
                       </th>
-                      <th className="px-3 py-3 text-slate-500 text-center no-print text-xs uppercase">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest no-print">
                         Aksi
                       </th>
                     </tr>
@@ -1173,17 +1235,20 @@ export default function NinaProjectApp() {
                         (Number(k.konsumsi) || 0) +
                         (Number(k.makan) || 0);
                       return (
-                        <tr key={s.id} className="hover:bg-slate-50">
-                          <td className="px-3 py-2.5 text-slate-500 sticky left-0 bg-white text-center text-xs">
+                        <tr
+                          key={s.id}
+                          className="hover:bg-teal-50/30 transition-colors"
+                        >
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold">
                             {idx + 1}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-800 sticky left-10 bg-white shadow-[2px_0_5px_rgba(0,0,0,0.01)] text-xs">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-slate-800 text-[10px] md:text-xs font-bold leading-tight">
                             {s.nama} <br />
-                            <span className="text-[9px] text-slate-400 uppercase">
+                            <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
                               {s.kelas}
                             </span>
                           </td>
-                          <td className="px-3 py-2.5 text-right">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
                             <EditableCell
                               type="number"
                               isCurrency
@@ -1191,10 +1256,10 @@ export default function NinaProjectApp() {
                               onSave={(val) =>
                                 handleInlineKeuangan(s.id, "infaq", val)
                               }
-                              placeholder="Rp0"
+                              placeholder="0"
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-right">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
                             <EditableCell
                               type="number"
                               isCurrency
@@ -1202,10 +1267,10 @@ export default function NinaProjectApp() {
                               onSave={(val) =>
                                 handleInlineKeuangan(s.id, "cicilan", val)
                               }
-                              placeholder="Rp0"
+                              placeholder="0"
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-right">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
                             <EditableCell
                               type="number"
                               isCurrency
@@ -1213,10 +1278,10 @@ export default function NinaProjectApp() {
                               onSave={(val) =>
                                 handleInlineKeuangan(s.id, "konsumsi", val)
                               }
-                              placeholder="Rp0"
+                              placeholder="0"
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-right">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
                             <EditableCell
                               type="number"
                               isCurrency
@@ -1224,13 +1289,13 @@ export default function NinaProjectApp() {
                               onSave={(val) =>
                                 handleInlineKeuangan(s.id, "makan", val)
                               }
-                              placeholder="Rp0"
+                              placeholder="0"
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-teal-700 bg-teal-50/20 text-right text-xs">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-teal-700 bg-teal-50/50 text-right text-[10px] md:text-xs font-bold whitespace-nowrap">
                             {formatRp(total)}
                           </td>
-                          <td className="px-3 py-2.5 text-center">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
                             <EditableCell
                               type="select"
                               options={["Cash", "Transfer"]}
@@ -1240,7 +1305,7 @@ export default function NinaProjectApp() {
                               }
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-center">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
                             <EditableCell
                               type="select"
                               options={["Belum", "Sudah"]}
@@ -1250,12 +1315,15 @@ export default function NinaProjectApp() {
                               }
                             />
                           </td>
-                          <td className="px-3 py-2.5 text-center no-print">
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center no-print">
                             <button
                               onClick={() => openModal("kwitansi", s)}
-                              className="p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg"
+                              className="p-1 md:p-2 bg-teal-50 text-teal-600 hover:bg-teal-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
                             >
-                              <ReceiptText size={14} />
+                              <ReceiptText
+                                size={12}
+                                className="md:w-4 md:h-4"
+                              />
                             </button>
                           </td>
                         </tr>
@@ -1268,197 +1336,273 @@ export default function NinaProjectApp() {
           )}
         </main>
 
-        {/* --- ALL MODALS --- */}
+        {/* --- ALL MODALS (FORM) COMPACT --- */}
         {modalType && modalType !== "kwitansi" && (
-          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm overflow-y-auto no-print">
-            <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl w-full max-w-md mt-auto md:mt-8 md:mb-8 p-4 md:p-5">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-base md:text-lg text-slate-800 capitalize flex items-center gap-2">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 no-print animate-in fade-in duration-200">
+            <div className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-2xl shadow-2xl w-full max-w-sm p-5 md:p-6 animate-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center mb-5">
+                <h3 className="text-base md:text-lg font-black text-slate-800 capitalize flex items-center gap-2.5">
+                  <div className="p-1.5 md:p-2 bg-teal-50 text-teal-600 rounded-lg md:rounded-xl">
+                    <Edit size={16} className="md:w-5 md:h-5" />
+                  </div>
                   Form {modalType}
                 </h3>
                 <button
                   onClick={closeModal}
-                  className="p-1.5 bg-slate-50 text-slate-400 rounded-full"
+                  className="p-1.5 md:p-2 bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 rounded-full transition-colors"
                 >
-                  <X size={18} />
+                  <X size={16} />
                 </button>
               </div>
               <form onSubmit={handleSaveData} className="space-y-3.5">
                 {modalType === "siswa" && (
                   <>
+                    <div>
+                      <label className="block text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 pl-1">
+                        Nama Lengkap
+                      </label>
+                      <input
+                        required
+                        type="text"
+                        placeholder="Masukkan nama..."
+                        className="w-full p-2.5 md:p-3 bg-slate-50/80 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl text-xs md:text-sm font-semibold outline-none transition-all shadow-sm"
+                        value={formData.nama || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, nama: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 pl-1">
+                        Kategori Kelas
+                      </label>
+                      <select
+                        required
+                        className="w-full p-2.5 md:p-3 bg-slate-50/80 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl text-xs md:text-sm font-semibold outline-none transition-all shadow-sm"
+                        value={formData.kelas || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, kelas: e.target.value })
+                        }
+                      >
+                        {kelasOptions.map((k) => (
+                          <option key={k} value={k}>
+                            {k}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {modalType === "kelas" && (
+                  <div>
+                    <label className="block text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 pl-1">
+                      Nama Tingkat/Kelas
+                    </label>
                     <input
                       required
                       type="text"
-                      placeholder="Nama Lengkap..."
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs outline-none"
-                      value={formData.nama || ""}
+                      placeholder="Misal: Kelas 1..."
+                      className="w-full p-2.5 md:p-3 bg-slate-50/80 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl text-xs md:text-sm font-semibold outline-none transition-all shadow-sm"
+                      value={formData.nama_kelas || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, nama: e.target.value })
+                        setFormData({ ...formData, nama_kelas: e.target.value })
                       }
                     />
-                    <select
-                      required
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs outline-none"
-                      value={formData.kelas || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, kelas: e.target.value })
-                      }
-                    >
-                      {kelasOptions.map((k) => (
-                        <option key={k} value={k}>
-                          {k}
-                        </option>
-                      ))}
-                    </select>
-                  </>
+                  </div>
                 )}
-                {modalType === "kelas" && (
-                  <input
-                    required
-                    type="text"
-                    placeholder="Nama Kelas Baru..."
-                    className="w-full p-3 bg-slate-50 rounded-xl text-xs outline-none"
-                    value={formData.nama_kelas || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, nama_kelas: e.target.value })
-                    }
-                  />
-                )}
+
                 {modalType === "nilai" && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      placeholder="Hafalan"
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.hafalan || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, hafalan: e.target.value })
-                      }
-                    />
-                    <input
-                      type="number"
-                      placeholder="Catatan"
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.catatan || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, catatan: e.target.value })
-                      }
-                    />
-                    <input
-                      type="number"
-                      placeholder="Ulangan"
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.ulangan || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ulangan: e.target.value })
-                      }
-                    />
-                    <input
-                      type="number"
-                      placeholder="Ujian"
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.ujian || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ujian: e.target.value })
-                      }
-                    />
-                    <textarea
-                      placeholder="Keterangan..."
-                      className="col-span-2 w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.keterangan || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, keterangan: e.target.value })
-                      }
-                    />
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div>
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Hafalan
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
+                        value={formData.hafalan || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, hafalan: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Catatan
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
+                        value={formData.catatan || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, catatan: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Ulangan
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
+                        value={formData.ulangan || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, ulangan: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Ujian
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
+                        value={formData.ujian || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, ujian: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Keterangan Opsional
+                      </label>
+                      <textarea
+                        rows="2"
+                        placeholder="Catatan guru..."
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
+                        value={formData.keterangan || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            keterangan: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
                 )}
+
                 {modalType === "keuangan" && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      placeholder="Infaq"
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.infaq || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, infaq: e.target.value })
-                      }
-                      onBlur={(e) =>
-                        setFormData({
-                          ...formData,
-                          infaq: autoRibuan(e.target.value),
-                        })
-                      }
-                    />
-                    <input
-                      type="number"
-                      placeholder="Daftar Ulang"
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.cicilan || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, cicilan: e.target.value })
-                      }
-                      onBlur={(e) =>
-                        setFormData({
-                          ...formData,
-                          cicilan: autoRibuan(e.target.value),
-                        })
-                      }
-                    />
-                    <input
-                      type="number"
-                      placeholder="Konsumsi"
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.konsumsi || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, konsumsi: e.target.value })
-                      }
-                      onBlur={(e) =>
-                        setFormData({
-                          ...formData,
-                          konsumsi: autoRibuan(e.target.value),
-                        })
-                      }
-                    />
-                    <input
-                      type="number"
-                      placeholder="Makan"
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.makan || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, makan: e.target.value })
-                      }
-                      onBlur={(e) =>
-                        setFormData({
-                          ...formData,
-                          makan: autoRibuan(e.target.value),
-                        })
-                      }
-                    />
-                    <select
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.metode || "Cash"}
-                      onChange={(e) =>
-                        setFormData({ ...formData, metode: e.target.value })
-                      }
-                    >
-                      <option value="Cash">Cash</option>
-                      <option value="Transfer">Transfer</option>
-                    </select>
-                    <select
-                      className="w-full p-3 bg-slate-50 rounded-xl text-xs"
-                      value={formData.status || "Belum"}
-                      onChange={(e) =>
-                        setFormData({ ...formData, status: e.target.value })
-                      }
-                    >
-                      <option value="Belum">Belum Lunas</option>
-                      <option value="Sudah">Sudah Lunas</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-3 md:gap-4">
+                    <div>
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Infaq
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-amber-500"
+                        value={formData.infaq || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, infaq: e.target.value })
+                        }
+                        onBlur={(e) =>
+                          setFormData({
+                            ...formData,
+                            infaq: autoRibuan(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Daftar Ulang
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-amber-500"
+                        value={formData.cicilan || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, cicilan: e.target.value })
+                        }
+                        onBlur={(e) =>
+                          setFormData({
+                            ...formData,
+                            cicilan: autoRibuan(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Konsumsi
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-amber-500"
+                        value={formData.konsumsi || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, konsumsi: e.target.value })
+                        }
+                        onBlur={(e) =>
+                          setFormData({
+                            ...formData,
+                            konsumsi: autoRibuan(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Makan Siang
+                      </label>
+                      <input
+                        type="number"
+                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-amber-500"
+                        value={formData.makan || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, makan: e.target.value })
+                        }
+                        onBlur={(e) =>
+                          setFormData({
+                            ...formData,
+                            makan: autoRibuan(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="col-span-2 grid grid-cols-2 gap-3 md:gap-4 mt-1 p-2 md:p-3 bg-amber-50/50 border border-amber-100 rounded-xl">
+                      <div>
+                        <label className="block text-[9px] md:text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1.5">
+                          Metode
+                        </label>
+                        <select
+                          className="w-full p-2 md:p-2.5 bg-white border border-amber-200 rounded-lg text-[10px] md:text-xs font-bold outline-none text-slate-700"
+                          value={formData.metode || "Cash"}
+                          onChange={(e) =>
+                            setFormData({ ...formData, metode: e.target.value })
+                          }
+                        >
+                          <option value="Cash">Tunai (Cash)</option>
+                          <option value="Transfer">Transfer Bank</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] md:text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1.5">
+                          Status Lunas
+                        </label>
+                        <select
+                          className="w-full p-2 md:p-2.5 bg-white border border-amber-200 rounded-lg text-[10px] md:text-xs font-bold outline-none text-slate-700"
+                          value={formData.status || "Belum"}
+                          onChange={(e) =>
+                            setFormData({ ...formData, status: e.target.value })
+                          }
+                        >
+                          <option value="Belum">Belum Bayar</option>
+                          <option value="Sudah">Sudah Lunas</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 )}
+
                 <button
                   type="submit"
-                  className="w-full py-3.5 rounded-xl text-white bg-teal-600 shadow-md flex justify-center items-center gap-2 mt-4 text-xs uppercase"
+                  className="w-full py-3 md:py-4 mt-4 md:mt-6 rounded-xl text-white bg-gradient-to-r from-teal-500 to-emerald-600 shadow-[0_10px_20px_rgba(20,184,166,0.3)] hover:shadow-[0_15px_30px_rgba(20,184,166,0.4)] hover:-translate-y-1 flex justify-center items-center gap-2 font-black text-[10px] md:text-xs uppercase tracking-widest transition-all duration-300"
                 >
                   <Save size={16} /> Simpan Data
                 </button>
@@ -1467,39 +1611,44 @@ export default function NinaProjectApp() {
           </div>
         )}
 
-        {/* --- MODAL KWITANSI --- */}
+        {/* --- MODAL KWITANSI KOMPAK --- */}
         {modalType === "kwitansi" && activeSiswa && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 p-4 overflow-y-auto">
-            <div className="absolute top-4 right-4 flex gap-2 no-print z-50">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-300 print:p-0 print:bg-transparent print:static print:block">
+            <div className="absolute top-4 right-4 flex flex-wrap gap-2 no-print z-50 justify-end">
               <button
                 onClick={handleDownloadImage}
                 disabled={isCapturing}
-                className="px-3 py-1.5 bg-blue-500 text-white rounded-lg flex items-center gap-1.5 text-xs shadow-md disabled:opacity-70"
+                className="px-3 py-2 md:px-4 md:py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-bold tracking-widest uppercase rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] shadow-[0_8px_20px_rgba(59,130,246,0.3)] disabled:opacity-70 transition-all hover:-translate-y-0.5"
               >
-                <Camera size={14} />{" "}
-                {isCapturing ? "Memproses..." : "Simpan Gambar"}
+                <Camera size={14} className="md:w-4 md:h-4" />{" "}
+                {isCapturing ? "Proses..." : "Simpan Gambar"}
               </button>
+
               <button
                 onClick={() => window.print()}
-                className="px-3 py-1.5 bg-teal-500 text-white rounded-lg flex items-center gap-1.5 text-xs shadow-md"
+                className="px-3 py-2 md:px-4 md:py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold tracking-widest uppercase rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] shadow-[0_8px_20px_rgba(20,184,166,0.3)] transition-all hover:-translate-y-0.5"
               >
-                <Printer size={14} /> Print PDF
+                <Printer size={14} className="md:w-4 md:h-4" /> Cetak & PDF
               </button>
+
               <button
                 onClick={closeModal}
-                className="p-1.5 bg-slate-800 text-white rounded-lg shadow-md"
+                className="p-1.5 md:p-2 bg-white/10 text-white hover:bg-rose-500 border border-white/20 rounded-lg md:rounded-xl shadow-lg transition-all"
               >
-                <X size={16} />
+                <X size={18} className="md:w-5 md:h-5" />
               </button>
             </div>
 
+            {/* AREA KERTAS KWITANSI (Diperkecil max-w-sm agar pas) */}
             <div
               id="kwitansi-print-area"
-              className="w-full max-w-md print:max-w-full print:w-full bg-white rounded-xl shadow-2xl print:shadow-none p-5 print:p-8 relative print-mode overflow-hidden mt-10 md:mt-0"
+              className="w-full max-w-sm md:max-w-md print:max-w-full print:w-full bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] print:shadow-none p-5 md:p-6 print:p-8 relative print-mode mt-16 md:mt-0 print:mt-0 mx-auto"
             >
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+              {/* WATERMARK LUNAS / BELUM */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
                 <span
-                  className={`text-[5rem] md:text-[6rem] font-black uppercase tracking-widest -rotate-[35deg] opacity-5 select-none ${keuanganData[activeSiswa.id]?.status === "Sudah" ? "text-teal-700" : "text-amber-600"}`}
+                  className={`text-[4rem] md:text-[6rem] font-black uppercase tracking-widest -rotate-[35deg] opacity-[0.04] select-none
+                  ${keuanganData[activeSiswa.id]?.status === "Sudah" ? "text-teal-900" : "text-amber-900"}`}
                 >
                   {keuanganData[activeSiswa.id]?.status === "Sudah"
                     ? "LUNAS"
@@ -1507,57 +1656,75 @@ export default function NinaProjectApp() {
                 </span>
               </div>
 
+              {/* KONTEN KWITANSI */}
               <div className="relative z-10">
-                <div className="flex justify-between items-start border-b-[2px] border-slate-800 pb-3 mb-4 bg-white/50">
-                  <div className="flex items-center gap-2.5">
+                <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-4 bg-white/50">
+                  <div className="flex items-center gap-2.5 md:gap-3">
                     <img
                       src="/logo.svg"
                       alt="Logo Nina"
-                      className="w-10 h-10 object-contain"
+                      className="w-10 h-10 md:w-12 md:h-12 object-contain"
                     />
                     <div>
-                      <h1 className="text-base text-[#000080] uppercase font-bismillah">
+                      <h1 className="text-sm md:text-lg text-[#000080] uppercase font-bismillah tracking-widest leading-tight">
                         NINA'S PROJECT
                       </h1>
-                      <p className="text-[9px] text-slate-500 uppercase">
+                      <p className="text-[7px] md:text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-0.5">
                         Manajemen Akademik
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <h2 className="text-lg text-slate-200 uppercase font-bold">
+                    <h2 className="text-sm md:text-xl text-slate-300 uppercase font-black tracking-widest leading-tight">
                       Kwitansi
                     </h2>
-                    <p className="text-xs text-slate-600 font-medium mt-0.5">
+                    <p className="text-[8px] md:text-[10px] font-bold text-slate-700 mt-1 uppercase tracking-widest bg-slate-100 inline-block px-1.5 py-0.5 rounded-sm">
                       No: {getNomorKwitansi(activeSiswa.id)}
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4 text-[10px]">
+                {/* DETAIL PENERIMA */}
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4 text-[9px] md:text-[11px]">
                   <table className="w-full text-left text-slate-800">
                     <tbody>
                       <tr>
-                        <td className="font-bold py-0.5 w-20">Terima Dari</td>
-                        <td className="py-0.5 w-2 font-bold">:</td>
-                        <td className="py-0.5">{activeSiswa.nama}</td>
+                        <td className="font-bold py-1 w-20 text-slate-500 uppercase tracking-widest">
+                          Terima Dari
+                        </td>
+                        <td className="py-1 w-2 font-black text-slate-400">
+                          :
+                        </td>
+                        <td className="py-1 font-bold text-[10px] md:text-[12px] text-slate-800">
+                          {activeSiswa.nama}
+                        </td>
                       </tr>
                       <tr>
-                        <td className="font-bold py-0.5">Kategori</td>
-                        <td className="py-0.5 w-2 font-bold">:</td>
-                        <td className="py-0.5">{activeSiswa.kelas}</td>
+                        <td className="font-bold py-1 text-slate-500 uppercase tracking-widest">
+                          Kategori
+                        </td>
+                        <td className="py-1 w-2 font-black text-slate-400">
+                          :
+                        </td>
+                        <td className="py-1 font-bold text-slate-800">
+                          {activeSiswa.kelas}
+                        </td>
                       </tr>
                       <tr>
-                        <td className="font-bold py-0.5">Metode</td>
-                        <td className="py-0.5 w-2 font-bold">:</td>
-                        <td className="py-0.5">
+                        <td className="font-bold py-1 text-slate-500 uppercase tracking-widest">
+                          Metode
+                        </td>
+                        <td className="py-1 w-2 font-black text-slate-400">
+                          :
+                        </td>
+                        <td className="py-1 font-bold flex items-center gap-1.5 text-slate-800">
                           {keuanganData[activeSiswa.id]?.metode || "Cash"}
-                          <span className="text-slate-500 italic ml-1">
-                            (
+                          <span
+                            className={`px-1.5 py-0.5 rounded-sm text-[7px] md:text-[8px] uppercase tracking-widest ${keuanganData[activeSiswa.id]?.status === "Sudah" ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"}`}
+                          >
                             {keuanganData[activeSiswa.id]?.status === "Sudah"
                               ? "Lunas"
                               : "Belum Selesai"}
-                            )
                           </span>
                         </td>
                       </tr>
@@ -1565,57 +1732,58 @@ export default function NinaProjectApp() {
                   </table>
                 </div>
 
-                <table className="w-full border border-slate-300 text-[10px] mb-4 bg-white">
+                {/* TABEL RINCIAN BIAYA */}
+                <table className="w-full border-2 border-slate-300 text-[9px] md:text-[10px] mb-6 bg-white overflow-hidden rounded-md">
                   <thead className="bg-slate-100">
                     <tr>
-                      <th className="p-1.5 border-r border-b border-slate-300 text-slate-700">
+                      <th className="p-1.5 md:p-2 border-r border-b border-slate-300 text-slate-700 font-black uppercase tracking-widest">
                         Rincian Pembayaran
                       </th>
-                      <th className="p-1.5 border-b border-slate-300 text-right text-slate-700 w-28">
+                      <th className="p-1.5 md:p-2 border-b border-slate-300 text-right text-slate-700 w-24 md:w-32 font-black uppercase tracking-widest">
                         Nominal
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-300">
                     <tr>
-                      <td className="p-1.5 border-r border-slate-300">
+                      <td className="p-1.5 md:p-2 border-r border-slate-300 font-semibold text-slate-600">
                         Infaq Pendidikan
                       </td>
-                      <td className="p-1.5 text-right font-medium">
+                      <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
                         {formatRp(keuanganData[activeSiswa.id]?.infaq)}
                       </td>
                     </tr>
                     <tr>
-                      <td className="p-1.5 border-r border-slate-300">
+                      <td className="p-1.5 md:p-2 border-r border-slate-300 font-semibold text-slate-600">
                         Cicilan Daftar Ulang
                       </td>
-                      <td className="p-1.5 text-right font-medium">
+                      <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
                         {formatRp(keuanganData[activeSiswa.id]?.cicilan)}
                       </td>
                     </tr>
                     <tr>
-                      <td className="p-1.5 border-r border-slate-300">
+                      <td className="p-1.5 md:p-2 border-r border-slate-300 font-semibold text-slate-600">
                         Biaya Konsumsi
                       </td>
-                      <td className="p-1.5 text-right font-medium">
+                      <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
                         {formatRp(keuanganData[activeSiswa.id]?.konsumsi)}
                       </td>
                     </tr>
                     <tr>
-                      <td className="p-1.5 border-r border-slate-300">
+                      <td className="p-1.5 md:p-2 border-r border-slate-300 font-semibold text-slate-600">
                         Makan Siang
                       </td>
-                      <td className="p-1.5 text-right font-medium">
+                      <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
                         {formatRp(keuanganData[activeSiswa.id]?.makan)}
                       </td>
                     </tr>
                   </tbody>
                   <tfoot className="bg-slate-800 text-white">
                     <tr>
-                      <td className="p-1.5 border-r border-slate-700 text-right uppercase tracking-widest text-[9px] font-bold">
+                      <td className="p-2 md:p-2.5 border-r border-slate-700 text-right uppercase tracking-widest text-[8px] md:text-[9px] font-black">
                         Total Pembayaran
                       </td>
-                      <td className="p-1.5 text-right text-xs md:text-sm font-bold">
+                      <td className="p-2 md:p-2.5 text-right text-[11px] md:text-[13px] font-black text-teal-300">
                         {formatRp(
                           (Number(keuanganData[activeSiswa.id]?.infaq) || 0) +
                             (Number(keuanganData[activeSiswa.id]?.cicilan) ||
@@ -1629,19 +1797,20 @@ export default function NinaProjectApp() {
                   </tfoot>
                 </table>
 
-                <div className="flex justify-end pr-2 text-center text-[9px]">
-                  <div>
-                    <p className="mb-0.5 uppercase text-slate-500 font-bold tracking-widest">
+                {/* TANDA TANGAN */}
+                <div className="flex justify-end pr-2 md:pr-4 text-center">
+                  <div className="flex flex-col items-center">
+                    <p className="mb-0 text-[8px] md:text-[9px] uppercase text-slate-500 font-black tracking-[0.2em]">
                       Penerima
                     </p>
-                    <div className="w-32 h-20 md:w-40 md:h-12 flex items-center justify-center mx-auto overflow-hidden">
+                    <div className="w-24 h-12 md:w-32 md:h-16 flex items-center justify-center overflow-hidden my-0.5">
                       <img
                         src="/assets/ttd.svg"
                         alt="Tanda Tangan"
                         className="w-full h-full object-cover scale-90 mix-blend-multiply"
                       />
                     </div>
-                    <p className="underline mt-1 text-slate-800 font-bold text-[10px]">
+                    <p className="border-b-[1.5px] border-slate-800 pb-0.5 text-slate-800 font-black text-[9px] md:text-[11px] tracking-wide">
                       Nina Rahilah S.Pd.
                     </p>
                   </div>
