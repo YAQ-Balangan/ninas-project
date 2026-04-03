@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Toaster, toast } from "react-hot-toast";
 import { toPng } from "html-to-image";
 import {
   Users,
@@ -112,7 +111,7 @@ const EditableCell = ({
   placeholder = "Kosong...",
   isCurrency = false,
   alignCenter = false,
-  useLongDate = false, // <-- Tambahan Prop untuk format tanggal panjang
+  useLongDate = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(value ?? "");
@@ -178,13 +177,13 @@ const EditableCell = ({
   }
   if (type === "select" && value === "Sudah") {
     displayValue = (
-      <span className="text-teal-600 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold">
+      <span className="text-teal-600 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold whitespace-nowrap">
         <CheckCircle2 size={12} /> Lunas
       </span>
     );
   } else if (type === "select" && value === "Belum") {
     displayValue = (
-      <span className="text-amber-500 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold">
+      <span className="text-amber-500 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold whitespace-nowrap">
         <AlertCircle size={12} /> Belum
       </span>
     );
@@ -223,7 +222,8 @@ export default function NinaProjectApp() {
   const [kelasOptions, setKelasOptions] = useState([]);
   const [siswaData, setSiswaData] = useState([]);
   const [nilaiData, setNilaiData] = useState({});
-  const [keuanganData, setKeuanganData] = useState({});
+  // PERUBAHAN: keuanganData sekarang berupa Array (Riwayat Transaksi)
+  const [keuanganData, setKeuanganData] = useState([]);
 
   const [formData, setFormData] = useState({});
   const [activeSiswa, setActiveSiswa] = useState(null);
@@ -265,10 +265,36 @@ export default function NinaProjectApp() {
     window.location.hash = tab;
   };
 
+  // PERUBAHAN: Logika Pemanggilan Modal
   const openModal = (type, data = null, existData = null) => {
     const today = new Date().toISOString().split("T")[0];
 
-    if (type === "siswa") {
+    if (type === "bayar_baru") {
+      // BIKIN TRANSAKSI BARU: Form dikosongkan
+      setActiveSiswa(data);
+      setFormData({
+        tanggal: today,
+        metode: "Cash",
+        status: "Sudah",
+        infaq: "",
+        cicilan: "",
+        konsumsi: "",
+        makan: "",
+      });
+      window.location.hash = `${activeTab}/keuangan`;
+      return;
+    } else if (type === "edit_keuangan") {
+      // EDIT TRANSAKSI LAMA (Dari Tab Keuangan)
+      setActiveSiswa(data); // data = siswa obj
+      setFormData({ ...existData }); // existData = transaksi obj
+      window.location.hash = `${activeTab}/keuangan`;
+      return;
+    } else if (type === "kwitansi") {
+      setActiveSiswa(data);
+      setFormData({ ...existData }); // Simpan transaksi aktif ke formData untuk dicetak
+      window.location.hash = `${activeTab}/kwitansi`;
+      return;
+    } else if (type === "siswa") {
       setFormData(
         data || {
           id: Date.now().toString(),
@@ -278,12 +304,11 @@ export default function NinaProjectApp() {
       );
     } else if (type === "kelas") {
       setFormData({ nama_kelas: "" });
-    } else if (type === "nilai" || type === "keuangan") {
+    } else if (type === "nilai") {
       setActiveSiswa(data);
       setFormData({ ...existData, tanggal: existData?.tanggal || today });
-    } else if (type === "kwitansi") {
-      setActiveSiswa(data);
     }
+
     window.location.hash = `${activeTab}/${type}`;
   };
 
@@ -309,12 +334,12 @@ export default function NinaProjectApp() {
         setNilaiData(nData);
       }
 
-      const { data: dKeuangan } = await supabase.from("keuangan").select("*");
-      if (dKeuangan) {
-        const kData = {};
-        dKeuangan.forEach((k) => (kData[k.siswa_id] = k));
-        setKeuanganData(kData);
-      }
+      // PERUBAHAN: Ambil semua riwayat keuangan sebagai Array, urutkan dari yang terbaru
+      const { data: dKeuangan } = await supabase
+        .from("keuangan")
+        .select("*")
+        .order("tanggal", { ascending: false });
+      if (dKeuangan) setKeuanganData(dKeuangan);
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     } finally {
@@ -336,24 +361,10 @@ export default function NinaProjectApp() {
     setSiswaData((prev) =>
       prev.map((s) => (s.id === id ? { ...s, [key]: val } : s)),
     );
-    const { error } = await supabase
+    await supabase
       .from("siswa")
       .update({ [key]: val })
       .eq("id", id);
-
-    // --- TAMPILKAN TOAST ---
-    if (!error) {
-      toast.success("Data siswa diperbarui!", {
-        style: {
-          borderRadius: "10px",
-          background: "#333",
-          color: "#fff",
-          fontSize: "12px",
-        },
-      });
-    } else {
-      toast.error("Gagal menyimpan data.");
-    }
   };
 
   const handleInlineNilai = async (siswaId, key, val) => {
@@ -364,17 +375,15 @@ export default function NinaProjectApp() {
     await supabase.from("nilai").upsert({ siswa_id: siswaId, ...newData });
   };
 
-  const handleInlineKeuangan = async (siswaId, key, val) => {
-    const today = new Date().toISOString().split("T")[0];
-    const exist = keuanganData[siswaId] || {
-      siswa_id: siswaId,
-      metode: "Cash",
-      status: "Belum",
-      tanggal: today,
-    };
-    const newData = { ...exist, [key]: val };
-    setKeuanganData((prev) => ({ ...prev, [siswaId]: newData }));
-    await supabase.from("keuangan").upsert({ siswa_id: siswaId, ...newData });
+  // PERUBAHAN: Inline Edit Keuangan berdasarkan ID Transaksi, BUKAN ID Siswa
+  const handleInlineKeuangan = async (transaksiId, key, val) => {
+    setKeuanganData((prev) =>
+      prev.map((k) => (k.id === transaksiId ? { ...k, [key]: val } : k)),
+    );
+    await supabase
+      .from("keuangan")
+      .update({ [key]: val })
+      .eq("id", transaksiId);
   };
 
   const handleSaveData = async (e) => {
@@ -417,17 +426,51 @@ export default function NinaProjectApp() {
           keterangan: formData.keterangan || null,
         });
       } else if (modalType === "keuangan") {
-        setKeuanganData({ ...keuanganData, [activeSiswa.id]: formData });
-        await supabase.from("keuangan").upsert({
-          siswa_id: activeSiswa.id,
-          tanggal: formData.tanggal || today,
-          infaq: formData.infaq || null,
-          cicilan: formData.cicilan || null,
-          konsumsi: formData.konsumsi || null,
-          makan: formData.makan || null,
-          metode: formData.metode,
-          status: formData.status,
-        });
+        // PERUBAHAN: Logika Simpan / Edit Transaksi Keuangan
+        if (formData.id) {
+          // JIKA ADA ID TRANSAKSI = MODE EDIT
+          await supabase
+            .from("keuangan")
+            .update({
+              tanggal: formData.tanggal,
+              infaq: formData.infaq || null,
+              cicilan: formData.cicilan || null,
+              konsumsi: formData.konsumsi || null,
+              makan: formData.makan || null,
+              metode: formData.metode,
+              status: formData.status,
+            })
+            .eq("id", formData.id);
+
+          setKeuanganData((prev) =>
+            prev.map((item) =>
+              item.id === formData.id ? { ...item, ...formData } : item,
+            ),
+          );
+        } else {
+          // JIKA TIDAK ADA ID = MODE BAYAR BARU (INSERT)
+          const payload = {
+            siswa_id: activeSiswa.id,
+            tanggal: formData.tanggal || today,
+            infaq: formData.infaq || null,
+            cicilan: formData.cicilan || null,
+            konsumsi: formData.konsumsi || null,
+            makan: formData.makan || null,
+            metode: formData.metode || "Cash",
+            status: formData.status || "Sudah",
+          };
+
+          const { data: newRow, error } = await supabase
+            .from("keuangan")
+            .insert(payload)
+            .select()
+            .single();
+          if (!error && newRow) {
+            setKeuanganData((prev) => [newRow, ...prev]);
+          } else {
+            fetchData(); // Fallback ambil ulang data jika select error
+          }
+        }
       }
     } catch (error) {
       console.error("Gagal menyimpan ke database:", error);
@@ -447,15 +490,37 @@ export default function NinaProjectApp() {
     }
   };
 
-  const getNomorKwitansi = (siswaId) => {
-    const index = siswaData.findIndex((s) => s.id === siswaId);
-    return index !== -1 ? index + 1 : 1;
+  // PERUBAHAN: Fungsi Hapus Riwayat Keuangan
+  const handleDeleteKeuangan = async (id_transaksi) => {
+    if (
+      window.confirm(
+        "Yakin ingin menghapus riwayat pembayaran ini? Data tidak bisa dikembalikan.",
+      )
+    ) {
+      setKeuanganData(keuanganData.filter((k) => k.id !== id_transaksi));
+      await supabase.from("keuangan").delete().eq("id", id_transaksi);
+    }
+  };
+
+  const getNomorKwitansi = (transaksiId) => {
+    // Jika belum ada ID (misal sistem sedang loading)
+    if (!transaksiId) return "000";
+
+    // Jika ID dari Supabase Anda adalah angka urut (1, 2, 3...)
+    // Kita tambahkan angka 0 di depannya agar jadi 001, 002, 015, dst.
+    if (!isNaN(transaksiId)) {
+      return String(transaksiId).padStart(3, "0");
+    }
+
+    // Jika ID dari Supabase Anda berupa huruf & angka acak (UUID)
+    // Kita ambil 5 karakter terakhirnya saja agar unik tapi tetap rapi
+    const strId = String(transaksiId).toUpperCase();
+    return strId.slice(-5);
   };
 
   const handleDownloadImage = async () => {
     const element = document.getElementById("kwitansi-print-area");
     if (!element) return;
-
     setIsCapturing(true);
     try {
       const dataUrl = await toPng(element, {
@@ -476,62 +541,62 @@ export default function NinaProjectApp() {
     }
   };
 
+  // Filter untuk Tab Siswa & Nilai
   const filteredSiswa = useMemo(() => {
     let result = siswaData.filter((s) => {
       const namaAman = String(s.nama || "").toLowerCase();
       const matchSearch = namaAman.includes(search.toLowerCase());
       const matchKelas = filterKelas ? s.kelas === filterKelas : true;
+      return matchSearch && matchKelas;
+    });
+    if (sortOrder === "asc")
+      result.sort((a, b) => a.nama.localeCompare(b.nama));
+    else if (sortOrder === "desc")
+      result.sort((a, b) => b.nama.localeCompare(a.nama));
+    return result;
+  }, [siswaData, search, filterKelas, sortOrder]);
 
-      let matchBulan = true;
-      if (filterBulan && activeTab === "keuangan") {
-        if (keuanganData[s.id]?.tanggal) {
-          matchBulan =
-            keuanganData[s.id].tanggal.substring(5, 7) === filterBulan;
-        } else {
-          matchBulan = false;
-        }
-      }
-
+  // PERUBAHAN: Filter KHUSUS untuk Tab Keuangan (Mapping berdasarkan Array Transaksi)
+  const filteredKeuangan = useMemo(() => {
+    let result = keuanganData.filter((k) => {
+      const s = siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
+      const namaAman = String(s.nama || "").toLowerCase();
+      const matchSearch = namaAman.includes(search.toLowerCase());
+      const matchKelas = filterKelas ? s.kelas === filterKelas : true;
+      const matchBulan = filterBulan
+        ? k.tanggal?.substring(5, 7) === filterBulan
+        : true;
       return matchSearch && matchKelas && matchBulan;
     });
 
-    if (sortOrder === "asc") {
-      result.sort((a, b) => a.nama.localeCompare(b.nama));
-    } else if (sortOrder === "desc") {
-      result.sort((a, b) => b.nama.localeCompare(a.nama));
-    }
+    // Sort berdasarkan nama siswa di dalam transaksi
+    result.sort((a, b) => {
+      const sA = siswaData.find((s) => s.id === a.siswa_id)?.nama || "";
+      const sB = siswaData.find((s) => s.id === b.siswa_id)?.nama || "";
+      if (sortOrder === "asc") return sA.localeCompare(sB);
+      return sB.localeCompare(sA);
+    });
 
     return result;
-  }, [
-    siswaData,
-    search,
-    filterKelas,
-    filterBulan,
-    sortOrder,
-    activeTab,
-    nilaiData,
-    keuanganData,
-  ]);
+  }, [keuanganData, siswaData, search, filterKelas, filterBulan, sortOrder]);
 
+  // Kalkulasi Total dari seluruh transaksi keuanganData
   const { grandTotalKeuangan, totalCash, totalTransfer } = useMemo(() => {
     let total = 0,
       cash = 0,
       tf = 0;
-    siswaData.forEach((s) => {
-      const k = keuanganData[s.id];
-      if (k) {
-        const sum =
-          (Number(k.infaq) || 0) +
-          (Number(k.cicilan) || 0) +
-          (Number(k.konsumsi) || 0) +
-          (Number(k.makan) || 0);
-        total += sum;
-        if (k.metode === "Transfer") tf += sum;
-        else cash += sum;
-      }
+    keuanganData.forEach((k) => {
+      const sum =
+        (Number(k.infaq) || 0) +
+        (Number(k.cicilan) || 0) +
+        (Number(k.konsumsi) || 0) +
+        (Number(k.makan) || 0);
+      total += sum;
+      if (k.metode === "Transfer") tf += sum;
+      else cash += sum;
     });
     return { grandTotalKeuangan: total, totalCash: cash, totalTransfer: tf };
-  }, [siswaData, keuanganData]);
+  }, [keuanganData]);
 
   const handleExportNilai = () => {
     const rows = [
@@ -586,8 +651,8 @@ export default function NinaProjectApp() {
         "Status",
       ],
     ];
-    filteredSiswa.forEach((s, i) => {
-      const k = keuanganData[s.id] || {};
+    filteredKeuangan.forEach((k, i) => {
+      const s = siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
       const total =
         (Number(k.infaq) || 0) +
         (Number(k.cicilan) || 0) +
@@ -596,8 +661,8 @@ export default function NinaProjectApp() {
       rows.push([
         i + 1,
         k.tanggal || "-",
-        s.nama,
-        s.kelas,
+        s.nama || "Unknown",
+        s.kelas || "-",
         k.infaq || 0,
         k.cicilan || 0,
         k.konsumsi || 0,
@@ -607,7 +672,7 @@ export default function NinaProjectApp() {
         k.status || "-",
       ]);
     });
-    exportToCSV("Rekap_Keuangan_Ninas_Project", rows);
+    exportToCSV("Riwayat_Keuangan_Ninas_Project", rows);
   };
 
   if (isLoading && splashState === "hidden") {
@@ -638,8 +703,7 @@ export default function NinaProjectApp() {
     <>
       {splashState !== "hidden" && (
         <div
-          className={`fixed inset-0 z-[999] bg-[#f8fafc] flex flex-col items-center justify-center transition-all duration-700 ease-in-out 
-          ${splashState === "exiting" ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"}`}
+          className={`fixed inset-0 z-[999] bg-[#f8fafc] flex flex-col items-center justify-center transition-all duration-700 ease-in-out ${splashState === "exiting" ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"}`}
         >
           <img
             src="/logo.svg"
@@ -657,40 +721,22 @@ export default function NinaProjectApp() {
       )}
 
       <div className="min-h-screen text-slate-800 pb-16 md:pb-0 relative selection-live-bg overflow-x-hidden z-0 font-sans selection:bg-teal-200 selection:text-teal-900">
-        <Toaster position="top-center" reverseOrder={false} />
         <style
           dangerouslySetInnerHTML={{
             __html: `
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
           
-          @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-          .selection-live-bg {
-            background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #fffbeb, #f0fdfa);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
-          }
+          @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+          .selection-live-bg { background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #fffbeb, #f0fdfa); background-size: 400% 400%; animation: gradientBG 15s ease infinite; }
 
           @media print {
-            body, html, .selection-live-bg, main, #root, .__next {
-              background: white !important; background-image: none !important; background-color: white !important; margin: 0 !important; padding: 0 !important;
-            }
-            nav, .no-print, button, .fixed:not(:has(#kwitansi-print-area)), .animate-blob1, .animate-blob2, .absolute.inset-0.overflow-hidden {
-              display: none !important;
-            }
+            body, html, .selection-live-bg, main, #root, .__next { background: white !important; background-image: none !important; background-color: white !important; margin: 0 !important; padding: 0 !important; }
+            nav, .no-print, button, .fixed:not(:has(#kwitansi-print-area)), .animate-blob1, .animate-blob2, .absolute.inset-0.overflow-hidden { display: none !important; }
             main { display: block !important; width: 100% !important; padding: 0 !important; }
-            .bg-white\\/80, .bg-white\\/90, .backdrop-blur-xl, .shadow-sm {
-              background: transparent !important; backdrop-filter: none !important; box-shadow: none !important; border: none !important;
-            }
+            .bg-white\\/80, .bg-white\\/90, .backdrop-blur-xl, .shadow-sm { background: transparent !important; backdrop-filter: none !important; box-shadow: none !important; border: none !important; }
             .print-kop-laporan { display: flex !important; border-bottom: 2px solid #000 !important; margin-bottom: 15px !important; padding-bottom: 10px !important; }
             main table { min-width: 100% !important; width: 100% !important; border: 1px solid #000 !important; border-collapse: collapse !important; }
-            
-            /* Agar tabel print tidak hancur gara-gara sticky */
             main th, main td { border: 1px solid #000 !important; padding: 6px 4px !important; color: black !important; background-color: transparent !important; position: static !important; box-shadow: none !important; }
-
             body:has(#kwitansi-print-area) main { display: none !important; }
             #kwitansi-print-area { display: block !important; position: relative !important; max-width: 550px !important; margin: 0 auto !important; background: white !important; }
             #kwitansi-print-area table { border: none !important; }
@@ -997,10 +1043,9 @@ export default function NinaProjectApp() {
                               {s.kelas}
                             </p>
                           </div>
+                          {/* PERUBAHAN: Tombol Bayar di Beranda selalu buat transaksi BARU */}
                           <button
-                            onClick={() =>
-                              openModal("keuangan", s, keuanganData[s.id] || {})
-                            }
+                            onClick={() => openModal("bayar_baru", s)}
                             className="px-3 py-1.5 md:px-4 md:py-2 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-lg md:rounded-xl text-[9px] md:text-[11px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
                           >
                             Bayar
@@ -1026,8 +1071,13 @@ export default function NinaProjectApp() {
                     <h2 className="text-sm md:text-xl font-black text-slate-800 capitalize tracking-tight">
                       Manajemen {activeTab}
                     </h2>
+                    {/* Menggunakan panjang filteredSiswa untuk Siswa/Nilai, panjang filteredKeuangan untuk Tab Keuangan */}
                     <p className="text-[9px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
-                      Total {filteredSiswa.length} Data
+                      Total{" "}
+                      {activeTab === "keuangan"
+                        ? filteredKeuangan.length
+                        : filteredSiswa.length}{" "}
+                      Data
                     </p>
                   </div>
                 </div>
@@ -1147,7 +1197,6 @@ export default function NinaProjectApp() {
           {/* ======================= TAB SISWA ======================= */}
           {activeTab === "siswa" && (
             <div className="bg-white/90">
-              {/* TAMPILAN DESKTOP (TABEL) */}
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[600px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
@@ -1195,14 +1244,9 @@ export default function NinaProjectApp() {
                         </td>
                         <td className="px-2 md:px-5 py-2 md:py-3 text-center no-print whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1 md:gap-1.5">
+                            {/* PERUBAHAN: Tombol Bayar Baru */}
                             <button
-                              onClick={() =>
-                                openModal(
-                                  "keuangan",
-                                  s,
-                                  keuanganData[s.id] || {},
-                                )
-                              }
+                              onClick={() => openModal("bayar_baru", s)}
                               className="px-2 py-1 md:px-3 md:py-1.5 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
                             >
                               Bayar
@@ -1227,7 +1271,6 @@ export default function NinaProjectApp() {
                 </table>
               </div>
 
-              {/* TAMPILAN MOBILE (KARTU) */}
               <div className="md:hidden print:hidden flex flex-col gap-3 p-3">
                 {filteredSiswa.map((s, idx) => (
                   <div
@@ -1267,10 +1310,9 @@ export default function NinaProjectApp() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-1">
+                      {/* PERUBAHAN: Tombol Bayar Baru */}
                       <button
-                        onClick={() =>
-                          openModal("keuangan", s, keuanganData[s.id] || {})
-                        }
+                        onClick={() => openModal("bayar_baru", s)}
                         className="px-4 py-2 bg-teal-50 text-teal-700 font-bold rounded-lg text-[10px] tracking-widest uppercase border border-teal-100 flex-1 mr-2 flex justify-center"
                       >
                         Bayar Uang
@@ -1299,7 +1341,6 @@ export default function NinaProjectApp() {
           {/* ======================= TAB NILAI ======================= */}
           {activeTab === "nilai" && (
             <div className="bg-white/90">
-              {/* TAMPILAN DESKTOP (TABEL NILAI) */}
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[850px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
@@ -1417,7 +1458,6 @@ export default function NinaProjectApp() {
                 </table>
               </div>
 
-              {/* TAMPILAN MOBILE (KARTU NILAI) */}
               <div className="md:hidden print:hidden flex flex-col gap-3 p-3">
                 {filteredSiswa.map((s, idx) => {
                   const n = nilaiData[s.id] || {};
@@ -1537,10 +1577,9 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* ======================= TAB KEUANGAN ======================= */}
+          {/* ======================= TAB KEUANGAN (RIWAYAT TRANSAKSI) ======================= */}
           {activeTab === "keuangan" && (
             <div className="bg-white/90">
-              {/* TAMPILAN DESKTOP (TABEL KEUANGAN) */}
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[1000px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
@@ -1581,8 +1620,11 @@ export default function NinaProjectApp() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredSiswa.map((s, idx) => {
-                      const k = keuanganData[s.id] || {};
+                    {/* PERUBAHAN: Loop berdasarkan Riwayat Transaksi (filteredKeuangan), bukan filteredSiswa */}
+                    {filteredKeuangan.map((k, idx) => {
+                      const s =
+                        siswaData.find((siswa) => siswa.id === k.siswa_id) ||
+                        {};
                       const total =
                         (Number(k.infaq) || 0) +
                         (Number(k.cicilan) || 0) +
@@ -1590,25 +1632,26 @@ export default function NinaProjectApp() {
                         (Number(k.makan) || 0);
                       return (
                         <tr
-                          key={s.id}
+                          key={k.id || idx}
                           className="group hover:bg-teal-50/30 transition-colors"
                         >
                           <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold whitespace-nowrap">
                             {idx + 1}
                           </td>
                           <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight whitespace-nowrap">
-                            {s.nama} <br />
+                            {s.nama || "Siswa Dihapus"} <br />
                             <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
-                              {s.kelas}
+                              {s.kelas || "-"}
                             </span>
                           </td>
+                          {/* PERUBAHAN: handleInlineKeuangan menggunakan k.id (ID Transaksi) */}
                           <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
                             <EditableCell
                               alignCenter={true}
                               type="date"
                               value={k.tanggal}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "tanggal", val)
+                                handleInlineKeuangan(k.id, "tanggal", val)
                               }
                               placeholder="-"
                             />
@@ -1619,7 +1662,7 @@ export default function NinaProjectApp() {
                               isCurrency
                               value={k.infaq}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "infaq", val)
+                                handleInlineKeuangan(k.id, "infaq", val)
                               }
                               placeholder="0"
                             />
@@ -1630,7 +1673,7 @@ export default function NinaProjectApp() {
                               isCurrency
                               value={k.cicilan}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "cicilan", val)
+                                handleInlineKeuangan(k.id, "cicilan", val)
                               }
                               placeholder="0"
                             />
@@ -1641,7 +1684,7 @@ export default function NinaProjectApp() {
                               isCurrency
                               value={k.konsumsi}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "konsumsi", val)
+                                handleInlineKeuangan(k.id, "konsumsi", val)
                               }
                               placeholder="0"
                             />
@@ -1652,7 +1695,7 @@ export default function NinaProjectApp() {
                               isCurrency
                               value={k.makan}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "makan", val)
+                                handleInlineKeuangan(k.id, "makan", val)
                               }
                               placeholder="0"
                             />
@@ -1666,7 +1709,7 @@ export default function NinaProjectApp() {
                               options={["Cash", "Transfer"]}
                               value={k.metode || "Cash"}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "metode", val)
+                                handleInlineKeuangan(k.id, "metode", val)
                               }
                             />
                           </td>
@@ -1676,20 +1719,40 @@ export default function NinaProjectApp() {
                               options={["Belum", "Sudah"]}
                               value={k.status || "Belum"}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "status", val)
+                                handleInlineKeuangan(k.id, "status", val)
                               }
                             />
                           </td>
                           <td className="px-1 md:px-4 py-1.5 md:py-3 text-center no-print whitespace-nowrap">
-                            <button
-                              onClick={() => openModal("kwitansi", s)}
-                              className="p-1 md:p-2 bg-teal-50 text-teal-600 hover:bg-teal-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
-                            >
-                              <ReceiptText
-                                size={12}
-                                className="md:w-4 md:h-4"
-                              />
-                            </button>
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => openModal("kwitansi", s, k)}
+                                title="Cetak Kwitansi"
+                                className="p-1 md:p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
+                              >
+                                <ReceiptText
+                                  size={12}
+                                  className="md:w-3.5 md:h-3.5"
+                                />
+                              </button>
+                              <button
+                                onClick={() => openModal("edit_keuangan", s, k)}
+                                title="Edit Transaksi"
+                                className="p-1 md:p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
+                              >
+                                <Edit size={12} className="md:w-3.5 md:h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteKeuangan(k.id)}
+                                title="Hapus Transaksi"
+                                className="p-1 md:p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
+                              >
+                                <Trash2
+                                  size={12}
+                                  className="md:w-3.5 md:h-3.5"
+                                />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1698,10 +1761,10 @@ export default function NinaProjectApp() {
                 </table>
               </div>
 
-              {/* TAMPILAN MOBILE (KARTU KEUANGAN) */}
               <div className="md:hidden print:hidden flex flex-col gap-3 p-3">
-                {filteredSiswa.map((s, idx) => {
-                  const k = keuanganData[s.id] || {};
+                {filteredKeuangan.map((k, idx) => {
+                  const s =
+                    siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
                   const total =
                     (Number(k.infaq) || 0) +
                     (Number(k.cicilan) || 0) +
@@ -1709,7 +1772,7 @@ export default function NinaProjectApp() {
                     (Number(k.makan) || 0);
                   return (
                     <div
-                      key={s.id}
+                      key={k.id || idx}
                       className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-2"
                     >
                       <div className="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
@@ -1719,39 +1782,51 @@ export default function NinaProjectApp() {
                           </div>
                           <div>
                             <span className="font-bold text-xs text-slate-800">
-                              {s.nama}
+                              {s.nama || "Siswa Dihapus"}
                             </span>
                             <span className="block text-[9px] text-slate-400 uppercase tracking-widest">
-                              {s.kelas}
+                              {s.kelas || "-"}
                             </span>
                           </div>
                         </div>
-                        <button
-                          onClick={() => openModal("kwitansi", s)}
-                          className="p-1.5 bg-teal-50 text-teal-600 border border-teal-100 hover:bg-teal-100 rounded-md flex items-center gap-1 shadow-sm"
-                        >
-                          <ReceiptText size={12} />{" "}
-                          <span className="text-[9px] font-bold">Cetak</span>
-                        </button>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => openModal("edit_keuangan", s, k)}
+                            className="p-1.5 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-md flex items-center shadow-sm"
+                          >
+                            <Edit size={12} />
+                          </button>
+                          <button
+                            onClick={() => openModal("kwitansi", s, k)}
+                            className="p-1.5 bg-teal-50 text-teal-600 border border-teal-100 hover:bg-teal-100 rounded-md flex items-center gap-1 shadow-sm"
+                          >
+                            <ReceiptText size={12} />{" "}
+                            <span className="text-[9px] font-bold">Cetak</span>
+                          </button>
+                        </div>
                       </div>
 
-                      <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border border-slate-100 mb-1">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase">
-                          Tgl Bayar
-                        </span>
-                        <div className="min-w-[120px] flex justify-end text-teal-700 font-bold text-[10px] tracking-wide">
-                          {/* Di HP kita pakai mode useLongDate supaya muncul format Jumat, 3 April 2026 */}
-                          <EditableCell
-                            alignCenter={false}
-                            type="date"
-                            value={k.tanggal}
-                            onSave={(val) =>
-                              handleInlineKeuangan(s.id, "tanggal", val)
-                            }
-                            placeholder="-"
-                            useLongDate={true}
-                          />
+                      <div className="flex flex-col bg-slate-50 p-2.5 rounded-lg border border-slate-100 mb-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[9px] text-slate-500 font-bold uppercase">
+                            Tgl Bayar
+                          </span>
+                          <div className="min-w-[120px] flex justify-end text-teal-700 font-bold text-[10px] tracking-wide">
+                            <EditableCell
+                              alignCenter={false}
+                              type="date"
+                              value={k.tanggal}
+                              onSave={(val) =>
+                                handleInlineKeuangan(k.id, "tanggal", val)
+                              }
+                              placeholder="-"
+                              useLongDate={true}
+                            />
+                          </div>
                         </div>
+                        <span className="text-teal-700 font-bold text-[10px] tracking-wide text-right">
+                          {formatTanggalLengkap(k.tanggal)}
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 mb-1">
@@ -1764,7 +1839,7 @@ export default function NinaProjectApp() {
                             isCurrency
                             value={k.infaq}
                             onSave={(val) =>
-                              handleInlineKeuangan(s.id, "infaq", val)
+                              handleInlineKeuangan(k.id, "infaq", val)
                             }
                             placeholder="0"
                           />
@@ -1778,7 +1853,7 @@ export default function NinaProjectApp() {
                             isCurrency
                             value={k.cicilan}
                             onSave={(val) =>
-                              handleInlineKeuangan(s.id, "cicilan", val)
+                              handleInlineKeuangan(k.id, "cicilan", val)
                             }
                             placeholder="0"
                           />
@@ -1792,7 +1867,7 @@ export default function NinaProjectApp() {
                             isCurrency
                             value={k.konsumsi}
                             onSave={(val) =>
-                              handleInlineKeuangan(s.id, "konsumsi", val)
+                              handleInlineKeuangan(k.id, "konsumsi", val)
                             }
                             placeholder="0"
                           />
@@ -1806,7 +1881,7 @@ export default function NinaProjectApp() {
                             isCurrency
                             value={k.makan}
                             onSave={(val) =>
-                              handleInlineKeuangan(s.id, "makan", val)
+                              handleInlineKeuangan(k.id, "makan", val)
                             }
                             placeholder="0"
                           />
@@ -1831,7 +1906,7 @@ export default function NinaProjectApp() {
                               options={["Cash", "Transfer"]}
                               value={k.metode || "Cash"}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "metode", val)
+                                handleInlineKeuangan(k.id, "metode", val)
                               }
                             />
                           </div>
@@ -1844,7 +1919,7 @@ export default function NinaProjectApp() {
                               options={["Belum", "Sudah"]}
                               value={k.status || "Belum"}
                               onSave={(val) =>
-                                handleInlineKeuangan(s.id, "status", val)
+                                handleInlineKeuangan(k.id, "status", val)
                               }
                             />
                           </div>
@@ -2149,7 +2224,8 @@ export default function NinaProjectApp() {
           </div>
         )}
 
-        {modalType === "kwitansi" && activeSiswa && (
+        {/* PERUBAHAN PADA KWITANSI: Menggunakan formData sebagai sumber data transaksi */}
+        {modalType === "kwitansi" && activeSiswa && formData && (
           <div
             id="modal-container-kwitansi"
             className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-300 print:p-0 print:bg-white print:static print:block"
@@ -2183,11 +2259,9 @@ export default function NinaProjectApp() {
             >
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
                 <span
-                  className={`text-[4rem] md:text-[6rem] font-black uppercase tracking-widest -rotate-[35deg] opacity-[0.04] select-none ${keuanganData[activeSiswa.id]?.status === "Sudah" ? "text-teal-900" : "text-amber-900"}`}
+                  className={`text-[4rem] md:text-[6rem] font-black uppercase tracking-widest -rotate-[35deg] opacity-[0.04] select-none ${formData.status === "Sudah" ? "text-teal-900" : "text-amber-900"}`}
                 >
-                  {keuanganData[activeSiswa.id]?.status === "Sudah"
-                    ? "LUNAS"
-                    : "BELUM"}
+                  {formData.status === "Sudah" ? "LUNAS" : "BELUM"}
                 </span>
               </div>
 
@@ -2200,7 +2274,7 @@ export default function NinaProjectApp() {
                       className="w-10 h-10 md:w-12 md:h-12 object-contain"
                     />
                     <div>
-                      <h1 className="text-sm md:text-lg text-[#000080] uppercase font-bismillah tracking-widest leading-tight">
+                      <h1 className="text-sm md:text-lg text-[#000080] font-bismillah tracking-widest leading-tight">
                         Nina Rahell Project
                       </h1>
                       <p className="text-[7px] md:text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-0.5">
@@ -2213,7 +2287,7 @@ export default function NinaProjectApp() {
                       Kwitansi
                     </h2>
                     <p className="text-[8px] md:text-[10px] font-bold text-slate-700 mt-1 uppercase tracking-widest bg-slate-100 inline-block px-1.5 py-0.5 rounded-sm">
-                      No: {getNomorKwitansi(activeSiswa.id)}
+                      No: {getNomorKwitansi(formData.id)}
                     </p>
                   </div>
                 </div>
@@ -2251,14 +2325,15 @@ export default function NinaProjectApp() {
                           :
                         </td>
                         <td className="py-1 font-bold text-slate-800">
-                          {keuanganData[activeSiswa.id]?.tanggal
-                            ? new Date(
-                                keuanganData[activeSiswa.id]?.tanggal,
-                              ).toLocaleDateString("id-ID", {
-                                day: "numeric",
-                                month: "long",
-                                year: "numeric",
-                              })
+                          {formData.tanggal
+                            ? new Date(formData.tanggal).toLocaleDateString(
+                                "id-ID",
+                                {
+                                  day: "numeric",
+                                  month: "long",
+                                  year: "numeric",
+                                },
+                              )
                             : "-"}
                         </td>
                       </tr>
@@ -2270,11 +2345,11 @@ export default function NinaProjectApp() {
                           :
                         </td>
                         <td className="py-1 font-bold flex items-center gap-1.5 text-slate-800">
-                          {keuanganData[activeSiswa.id]?.metode || "Cash"}
+                          {formData.metode || "Cash"}
                           <span
-                            className={`px-1.5 py-0.5 rounded-sm text-[7px] md:text-[8px] uppercase tracking-widest ${keuanganData[activeSiswa.id]?.status === "Sudah" ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"}`}
+                            className={`px-1.5 py-0.5 rounded-sm text-[7px] md:text-[8px] uppercase tracking-widest ${formData.status === "Sudah" ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"}`}
                           >
-                            {keuanganData[activeSiswa.id]?.status === "Sudah"
+                            {formData.status === "Sudah"
                               ? "Lunas"
                               : "Belum Selesai"}
                           </span>
@@ -2301,7 +2376,7 @@ export default function NinaProjectApp() {
                         Infaq Pendidikan
                       </td>
                       <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
-                        {formatRp(keuanganData[activeSiswa.id]?.infaq)}
+                        {formatRp(formData.infaq)}
                       </td>
                     </tr>
                     <tr>
@@ -2309,7 +2384,7 @@ export default function NinaProjectApp() {
                         Cicilan Daftar Ulang
                       </td>
                       <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
-                        {formatRp(keuanganData[activeSiswa.id]?.cicilan)}
+                        {formatRp(formData.cicilan)}
                       </td>
                     </tr>
                     <tr>
@@ -2317,7 +2392,7 @@ export default function NinaProjectApp() {
                         Biaya Konsumsi
                       </td>
                       <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
-                        {formatRp(keuanganData[activeSiswa.id]?.konsumsi)}
+                        {formatRp(formData.konsumsi)}
                       </td>
                     </tr>
                     <tr>
@@ -2325,7 +2400,7 @@ export default function NinaProjectApp() {
                         Makan Siang
                       </td>
                       <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
-                        {formatRp(keuanganData[activeSiswa.id]?.makan)}
+                        {formatRp(formData.makan)}
                       </td>
                     </tr>
                   </tbody>
@@ -2336,12 +2411,10 @@ export default function NinaProjectApp() {
                       </td>
                       <td className="p-2 md:p-2.5 text-right text-[11px] md:text-[13px] font-black text-teal-300 whitespace-nowrap">
                         {formatRp(
-                          (Number(keuanganData[activeSiswa.id]?.infaq) || 0) +
-                            (Number(keuanganData[activeSiswa.id]?.cicilan) ||
-                              0) +
-                            (Number(keuanganData[activeSiswa.id]?.konsumsi) ||
-                              0) +
-                            (Number(keuanganData[activeSiswa.id]?.makan) || 0),
+                          (Number(formData.infaq) || 0) +
+                            (Number(formData.cicilan) || 0) +
+                            (Number(formData.konsumsi) || 0) +
+                            (Number(formData.makan) || 0),
                         )}
                       </td>
                     </tr>
