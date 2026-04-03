@@ -158,7 +158,7 @@ const EditableCell = ({
 };
 
 // ==========================================
-// KOMPONEN UTAMA NINA'S PROJECT
+// KOMPONEN UTAMA Nina Rahell Project
 // ==========================================
 export default function NinaProjectApp() {
   const [activeTab, setActiveTab] = useState("home");
@@ -529,7 +529,7 @@ export default function NinaProjectApp() {
             className="w-24 h-24 md:w-32 md:h-32 object-contain mb-8 drop-shadow-xl animate-[pulse_3s_ease-in-out_infinite]"
           />
           <h1 className="font-bismillah text-4xl md:text-5xl text-[#000080] tracking-widest drop-shadow-sm">
-            Nina's Project
+            Nina Rahell Project
           </h1>
           <div className="w-10 h-1 bg-teal-500 rounded-full mt-4 mb-3 opacity-70"></div>
           <p className="text-slate-500 text-[10px] md:text-xs uppercase tracking-[0.3em] font-semibold">
@@ -548,16 +548,7 @@ export default function NinaProjectApp() {
             __html: `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
     
-    @font-face {
-      font-family: 'Bismillah Script';
-      src: url('/fonts/BismillahScript.ttf') format('truetype');
-      font-weight: normal; font-style: normal;
-    }
-
-    * { font-family: 'Inter', sans-serif; }
-    .font-bismillah { font-family: 'Bismillah Script', cursive; }
-
-    @keyframes gradientBG {
+        @keyframes gradientBG {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
@@ -697,7 +688,7 @@ export default function NinaProjectApp() {
                   className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-sm group-hover:scale-105 transition-transform"
                 />
                 <span className="font-bismillah text-xl md:text-3xl text-[#000080] drop-shadow-sm pt-1.5">
-                  Nina's Project
+                  Nina Rahell Project
                 </span>
               </div>
               <div className="hidden md:flex space-x-2 bg-slate-50/50 p-1.5 rounded-xl border border-white/60">
@@ -785,7 +776,7 @@ export default function NinaProjectApp() {
               />
               <div>
                 <h1 className="font-bismillah text-4xl text-[#000080] leading-tight">
-                  Nina's Project
+                  Nina Rahell Project
                 </h1>
                 <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-[0.3em]">
                   Manajemen Akademik & Keuangan Siswa
@@ -1312,7 +1303,7 @@ export default function NinaProjectApp() {
                         Ulang
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
-                        Konsum
+                        Konsumsi
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Makan
@@ -1778,7 +1769,7 @@ export default function NinaProjectApp() {
                     />
                     <div>
                       <h1 className="text-sm md:text-lg text-[#000080] uppercase font-bismillah tracking-widest leading-tight">
-                        NINA'S PROJECT
+                        Nina Rahell Project
                       </h1>
                       <p className="text-[7px] md:text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-0.5">
                         Manajemen Akademik
@@ -1801,7 +1792,7 @@ export default function NinaProjectApp() {
                     <tbody>
                       <tr>
                         <td className="font-bold py-1 w-20 text-slate-500 uppercase tracking-widest">
-                          Terima Dari
+                          Nama
                         </td>
                         <td className="py-1 w-2 font-black text-slate-400">
                           :

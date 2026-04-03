@@ -1,6 +1,20 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
 
+/* Deklarasi Font Custom Bismillah Script */
+@font-face {
+  font-family: 'Bismillah Script';
+  /* Pastikan huruf besar/kecil dan spasinya sama persis dengan nama file Anda */
+  src: url('./assets/fonts/Bismillah Script.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Class untuk dipanggil di App.jsx */
+.font-bismillah {
+  font-family: 'Bismillah Script', cursive;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
