@@ -111,12 +111,14 @@ export default function NinaProjectApp() {
       window.location.hash = `${activeTab}/kwitansi`;
       return;
     } else if (type === "siswa") {
+      // Cari ID terbesar dari data siswa yang ada, lalu tambah 1
+      const nextId =
+        siswaData.length > 0
+          ? Math.max(...siswaData.map((s) => parseInt(s.id) || 0)) + 1
+          : 1;
+
       setFormData(
-        data || {
-          id: Date.now().toString(),
-          nama: "",
-          kelas: kelasOptions[0] || "",
-        },
+        data || { id: nextId, nama: "", kelas: kelasOptions[0] || "" },
       );
     } else if (type === "kelas") {
       setFormData({ nama_kelas: "" });
