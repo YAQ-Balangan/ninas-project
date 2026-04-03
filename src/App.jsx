@@ -129,6 +129,13 @@ const EditableCell = ({
 
   let displayValue = value;
   if (isCurrency && value) displayValue = formatRp(value);
+  if (type === "date" && value) {
+    displayValue = new Date(value).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "2-digit",
+    });
+  }
   if (type === "select" && value === "Sudah") {
     displayValue = (
       <span className="text-teal-600 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold">
@@ -164,8 +171,12 @@ export default function NinaProjectApp() {
   const [activeTab, setActiveTab] = useState("home");
   const [modalType, setModalType] = useState(null);
 
+  // States Filter & Sort
   const [search, setSearch] = useState("");
   const [filterKelas, setFilterKelas] = useState("");
+  const [filterBulan, setFilterBulan] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc"); // asc atau desc
+
   const [isLoading, setIsLoading] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
   const [splashState, setSplashState] = useState("entering");
@@ -216,6 +227,9 @@ export default function NinaProjectApp() {
   };
 
   const openModal = (type, data = null, existData = null) => {
+    // Ambil tanggal hari ini sbg default untuk form
+    const today = new Date().toISOString().split("T")[0];
+
     if (type === "siswa") {
       setFormData(
         data || {
@@ -228,7 +242,7 @@ export default function NinaProjectApp() {
       setFormData({ nama_kelas: "" });
     } else if (type === "nilai" || type === "keuangan") {
       setActiveSiswa(data);
-      setFormData({ ...existData });
+      setFormData({ ...existData, tanggal: existData?.tanggal || today });
     } else if (type === "kwitansi") {
       setActiveSiswa(data);
     }
@@ -285,17 +299,20 @@ export default function NinaProjectApp() {
   };
 
   const handleInlineNilai = async (siswaId, key, val) => {
-    const exist = nilaiData[siswaId] || { siswa_id: siswaId };
+    const today = new Date().toISOString().split("T")[0];
+    const exist = nilaiData[siswaId] || { siswa_id: siswaId, tanggal: today };
     const newData = { ...exist, [key]: val };
     setNilaiData((prev) => ({ ...prev, [siswaId]: newData }));
     await supabase.from("nilai").upsert({ siswa_id: siswaId, ...newData });
   };
 
   const handleInlineKeuangan = async (siswaId, key, val) => {
+    const today = new Date().toISOString().split("T")[0];
     const exist = keuanganData[siswaId] || {
       siswa_id: siswaId,
       metode: "Cash",
       status: "Belum",
+      tanggal: today,
     };
     const newData = { ...exist, [key]: val };
     setKeuanganData((prev) => ({ ...prev, [siswaId]: newData }));
@@ -304,6 +321,7 @@ export default function NinaProjectApp() {
 
   const handleSaveData = async (e) => {
     e.preventDefault();
+    const today = new Date().toISOString().split("T")[0];
     try {
       if (modalType === "kelas") {
         if (
@@ -333,6 +351,7 @@ export default function NinaProjectApp() {
         setNilaiData({ ...nilaiData, [activeSiswa.id]: formData });
         await supabase.from("nilai").upsert({
           siswa_id: activeSiswa.id,
+          tanggal: formData.tanggal || today,
           hafalan: formData.hafalan || null,
           catatan: formData.catatan || null,
           ulangan: formData.ulangan || null,
@@ -343,6 +362,7 @@ export default function NinaProjectApp() {
         setKeuanganData({ ...keuanganData, [activeSiswa.id]: formData });
         await supabase.from("keuangan").upsert({
           siswa_id: activeSiswa.id,
+          tanggal: formData.tanggal || today,
           infaq: formData.infaq || null,
           cicilan: formData.cicilan || null,
           konsumsi: formData.konsumsi || null,
@@ -400,14 +420,46 @@ export default function NinaProjectApp() {
     }
   };
 
+  // LOGIKA FILTER & SORTIR YANG BARU
   const filteredSiswa = useMemo(() => {
-    return siswaData.filter((s) => {
+    let result = siswaData.filter((s) => {
       const namaAman = String(s.nama || "").toLowerCase();
       const matchSearch = namaAman.includes(search.toLowerCase());
       const matchKelas = filterKelas ? s.kelas === filterKelas : true;
-      return matchSearch && matchKelas;
+
+      let matchBulan = true;
+      if (filterBulan) {
+        if (activeTab === "nilai" && nilaiData[s.id]?.tanggal) {
+          // format tgl YYYY-MM-DD -> index 5-7 adalah MM
+          matchBulan = nilaiData[s.id].tanggal.substring(5, 7) === filterBulan;
+        } else if (activeTab === "keuangan" && keuanganData[s.id]?.tanggal) {
+          matchBulan =
+            keuanganData[s.id].tanggal.substring(5, 7) === filterBulan;
+        } else if (activeTab === "nilai" || activeTab === "keuangan") {
+          matchBulan = false; // kalau difilter tapi tgl kosong, jgn ditampilkan
+        }
+      }
+
+      return matchSearch && matchKelas && matchBulan;
     });
-  }, [siswaData, search, filterKelas]);
+
+    if (sortOrder === "asc") {
+      result.sort((a, b) => a.nama.localeCompare(b.nama));
+    } else if (sortOrder === "desc") {
+      result.sort((a, b) => b.nama.localeCompare(a.nama));
+    }
+
+    return result;
+  }, [
+    siswaData,
+    search,
+    filterKelas,
+    filterBulan,
+    sortOrder,
+    activeTab,
+    nilaiData,
+    keuanganData,
+  ]);
 
   const { grandTotalKeuangan, totalCash, totalTransfer } = useMemo(() => {
     let total = 0,
@@ -433,6 +485,7 @@ export default function NinaProjectApp() {
     const rows = [
       [
         "No",
+        "Tanggal Input",
         "Nama",
         "Kelas",
         "Hafalan",
@@ -453,6 +506,7 @@ export default function NinaProjectApp() {
         4;
       rows.push([
         i + 1,
+        n.tanggal || "-",
         s.nama,
         s.kelas,
         n.hafalan || 0,
@@ -470,6 +524,7 @@ export default function NinaProjectApp() {
     const rows = [
       [
         "No",
+        "Tanggal",
         "Nama",
         "Kelas",
         "Infaq",
@@ -490,6 +545,7 @@ export default function NinaProjectApp() {
         (Number(k.makan) || 0);
       rows.push([
         i + 1,
+        k.tanggal || "-",
         s.nama,
         s.kelas,
         k.infaq || 0,
@@ -512,6 +568,22 @@ export default function NinaProjectApp() {
       </div>
     );
   }
+
+  // Nama bulan untuk header laporan
+  const namaBulan = [
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+  ];
 
   return (
     <>
@@ -542,7 +614,6 @@ export default function NinaProjectApp() {
           APLIKASI UTAMA
       ========================================== */}
       <div className="min-h-screen text-slate-800 pb-16 md:pb-0 relative selection-live-bg overflow-x-hidden z-0 font-sans selection:bg-teal-200 selection:text-teal-900">
-        {/* CSS KHUSUS ANIMASI BACKGROUND & PRINT FIX */}
         <style
           dangerouslySetInnerHTML={{
             __html: `
@@ -563,108 +634,32 @@ export default function NinaProjectApp() {
        LOGIKA PRINT (FIX BLANK, CLEAN & KOP)
     ========================================== */
     @media print {
-      /* 1. RESET TOTAL LATAR BELAKANG */
-      /* Kita targetkan semua kontainer utama agar menjadi putih polos */
-      body, 
-      html, 
-      .selection-live-bg, 
-      main, 
-      #root, 
-      .__next {
-        background: white !important;
-        background-image: none !important;
-        background-color: white !important;
-        margin: 0 !important;
-        padding: 0 !important;
+      body, html, .selection-live-bg, main, #root, .__next {
+        background: white !important; background-image: none !important; background-color: white !important; margin: 0 !important; padding: 0 !important;
       }
-
-      /* 2. SEMBUNYIKAN ELEMEN UI & DEKORASI */
-      nav, 
-      .no-print, 
-      button, 
-      .fixed:not(:has(#kwitansi-print-area)), 
-      .animate-blob1, 
-      .animate-blob2,
-      .absolute.inset-0.overflow-hidden {
+      nav, .no-print, button, .fixed:not(:has(#kwitansi-print-area)), .animate-blob1, .animate-blob2, .absolute.inset-0.overflow-hidden {
         display: none !important;
       }
-
-      /* 3. SETTING LAPORAN TABEL */
-      main {
-        display: block !important;
-        width: 100% !important;
-        padding: 0 !important;
+      main { display: block !important; width: 100% !important; padding: 0 !important; }
+      .bg-white\/80, .bg-white\/90, .backdrop-blur-xl, .shadow-sm {
+        background: transparent !important; backdrop-filter: none !important; box-shadow: none !important; border: none !important;
       }
+      .print-kop-laporan { display: flex !important; border-bottom: 2px solid #000 !important; margin-bottom: 15px !important; padding-bottom: 10px !important; }
+      main table { min-width: 100% !important; width: 100% !important; border: 1px solid #000 !important; border-collapse: collapse !important; }
+      main th, main td { border: 1px solid #000 !important; padding: 6px 4px !important; color: black !important; background-color: transparent !important; }
 
-      /* Hilangkan efek glassmorphism/transparansi agar tidak berbayang saat di-print */
-      .bg-white\/80, 
-      .bg-white\/90, 
-      .backdrop-blur-xl,
-      .shadow-sm {
-        background: transparent !important;
-        backdrop-filter: none !important;
-        box-shadow: none !important;
-        border: none !important;
-      }
-
-      .print-kop-laporan {
-        display: flex !important;
-        border-bottom: 2px solid #000 !important;
-        margin-bottom: 15px !important;
-        padding-bottom: 10px !important;
-      }
-
-      main table {
-        min-width: 100% !important;
-        width: 100% !important;
-        border: 1px solid #000 !important;
-        border-collapse: collapse !important;
-      }
-      
-      main th, main td {
-        border: 1px solid #000 !important;
-        padding: 6px 4px !important;
-        color: black !important;
-        background-color: transparent !important; /* Mencegah warna sel tabel aplikasi ikut terbawa */
-      }
-
-      /* 4. SETTING KHUSUS KWITANSI */
-      body:has(#kwitansi-print-area) main {
-        display: none !important;
-      }
-
-      #kwitansi-print-area {
-        display: block !important;
-        position: relative !important;
-        max-width: 550px !important;
-        margin: 0 auto !important;
-        background: white !important;
-      }
-
+      body:has(#kwitansi-print-area) main { display: none !important; }
+      #kwitansi-print-area { display: block !important; position: relative !important; max-width: 550px !important; margin: 0 auto !important; background: white !important; }
       #kwitansi-print-area table { border: none !important; }
       #kwitansi-print-area td, #kwitansi-print-area th { border: none !important; }
-      
-      /* Hanya beri border pada tabel rincian biaya di kwitansi */
-      #kwitansi-print-area .border-2 {
-        border: 1.5px solid #000 !important;
-      }
-      #kwitansi-print-area .border-2 td, 
-      #kwitansi-print-area .border-2 th {
-        border: 1px solid #000 !important;
-      }
-
-      /* 5. AKTIFKAN WARNA HANYA UNTUK ELEMEN PENTING */
-      /* Agar logo dan teks berwarna tetap muncul di atas kertas putih */
-      * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
+      #kwitansi-print-area .border-2 { border: 1.5px solid #000 !important; }
+      #kwitansi-print-area .border-2 td, #kwitansi-print-area .border-2 th { border: 1px solid #000 !important; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
     `,
           }}
         />
 
-        {/* ELEMEN BACKGROUND BLOBS MELAYANG */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-[-1] opacity-70 no-print">
           <div className="absolute -top-[10%] -left-[10%] w-[50vw] h-[50vw] bg-emerald-300/30 rounded-[40%] blur-[80px] animate-blob1" />
           <div className="absolute top-[40%] -right-[10%] w-[60vw] h-[60vw] bg-amber-300/20 rounded-[45%] blur-[80px] animate-blob2" />
@@ -674,7 +669,6 @@ export default function NinaProjectApp() {
           />
         </div>
 
-        {/* --- TOP NAVBAR GLASSMORPHISM --- */}
         <nav className="bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-sm sticky top-0 z-40 no-print">
           <div className="max-w-7xl mx-auto px-4 md:px-6">
             <div className="flex justify-between items-center h-14 md:h-16">
@@ -722,7 +716,6 @@ export default function NinaProjectApp() {
           </div>
         </nav>
 
-        {/* --- BOTTOM NAVIGATION BAR (Mobile Glassmorphism) --- */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-white/60 flex justify-around items-center pt-1.5 pb-1.5 z-40 px-2 no-print shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
           {["home", "siswa", "nilai", "keuangan"].map((tab) => (
             <button
@@ -789,10 +782,17 @@ export default function NinaProjectApp() {
                 {activeTab === "siswa"
                   ? "Data Siswa"
                   : activeTab === "nilai"
-                    ? "Rekap Nilai"
-                    : "Keuangan"}
+                    ? "Rekap Nilai Akademik"
+                    : "Keuangan Siswa"}
               </h2>
-              <p className="text-[10px] font-medium text-slate-500 italic">
+              {/* Tampilkan filter bulan jika sedang difilter */}
+              {filterBulan &&
+                (activeTab === "nilai" || activeTab === "keuangan") && (
+                  <p className="text-sm font-bold text-slate-600 uppercase mt-1">
+                    Bulan: {namaBulan[parseInt(filterBulan) - 1]} 2026
+                  </p>
+                )}
+              <p className="text-[10px] font-medium text-slate-500 italic mt-1">
                 Dicetak pada:{" "}
                 {new Date().toLocaleDateString("id-ID", { dateStyle: "long" })}
               </p>
@@ -800,7 +800,6 @@ export default function NinaProjectApp() {
           </div>
           {activeTab === "home" && (
             <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-              {/* Card Kas Elegan */}
               <div className="bg-gradient-to-br from-teal-500/95 to-emerald-700/95 backdrop-blur-xl rounded-3xl p-5 md:p-8 text-white shadow-[0_20px_40px_rgba(20,184,166,0.2)] border border-white/20 relative overflow-hidden">
                 <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
                 <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-900/20 rounded-full blur-3xl"></div>
@@ -853,7 +852,6 @@ export default function NinaProjectApp() {
                 </div>
               </div>
 
-              {/* Menu Cepat Elegan (Hover Effects) */}
               <div>
                 <h3 className="text-[11px] md:text-sm text-slate-500 font-bold uppercase tracking-[0.2em] mb-4 pl-2">
                   Menu Cepat
@@ -868,9 +866,7 @@ export default function NinaProjectApp() {
                       <UserPlus className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
-                      Siswa
-                      <br className="md:hidden" />
-                      Baru
+                      Siswa Baru
                     </span>
                   </button>
 
@@ -883,9 +879,7 @@ export default function NinaProjectApp() {
                       <Banknote className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
-                      Input
-                      <br className="md:hidden" />
-                      Uang
+                      Input Uang
                     </span>
                   </button>
 
@@ -898,9 +892,7 @@ export default function NinaProjectApp() {
                       <FileText className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
-                      Input
-                      <br className="md:hidden" />
-                      Nilai
+                      Input Nilai
                     </span>
                   </button>
 
@@ -913,15 +905,12 @@ export default function NinaProjectApp() {
                       <ReceiptText className="w-5 h-5 md:w-6 md:h-6" />
                     </div>
                     <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
-                      Cetak
-                      <br className="md:hidden" />
-                      Kwitansi
+                      Cetak Kwitansi
                     </span>
                   </button>
                 </div>
               </div>
 
-              {/* List Pendaftar */}
               <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-5 md:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xs md:text-sm text-slate-800 font-bold uppercase tracking-wider">
@@ -977,7 +966,6 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* --- FILTER BAR & TOMBOL EXPORT/PRINT KETIKA DI TAB DATA --- */}
           {activeTab !== "home" && (
             <div className="no-print bg-white/80 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 p-3 md:p-5 mb-4 md:mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-4">
@@ -1012,6 +1000,16 @@ export default function NinaProjectApp() {
                     />
                   </div>
 
+                  {/* FILTER SORT A-Z */}
+                  <select
+                    className="py-1.5 md:py-2 px-2 md:px-3 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-semibold border border-slate-200 outline-none text-slate-700 shadow-sm"
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                  >
+                    <option value="asc">A - Z</option>
+                    <option value="desc">Z - A</option>
+                  </select>
+
                   <select
                     className="py-1.5 md:py-2 px-2 md:px-3 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-semibold border border-slate-200 outline-none text-slate-700 shadow-sm"
                     value={filterKelas}
@@ -1024,6 +1022,29 @@ export default function NinaProjectApp() {
                       </option>
                     ))}
                   </select>
+
+                  {/* FILTER BULAN (Hanya untuk Nilai & Keuangan) */}
+                  {(activeTab === "nilai" || activeTab === "keuangan") && (
+                    <select
+                      className="py-1.5 md:py-2 px-2 md:px-3 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-semibold border border-slate-200 outline-none text-slate-700 shadow-sm"
+                      value={filterBulan}
+                      onChange={(e) => setFilterBulan(e.target.value)}
+                    >
+                      <option value="">Semua Waktu</option>
+                      <option value="01">Januari</option>
+                      <option value="02">Februari</option>
+                      <option value="03">Maret</option>
+                      <option value="04">April</option>
+                      <option value="05">Mei</option>
+                      <option value="06">Juni</option>
+                      <option value="07">Juli</option>
+                      <option value="08">Agustus</option>
+                      <option value="09">September</option>
+                      <option value="10">Oktober</option>
+                      <option value="11">November</option>
+                      <option value="12">Desember</option>
+                    </select>
+                  )}
 
                   {activeTab === "siswa" && (
                     <>
@@ -1042,7 +1063,6 @@ export default function NinaProjectApp() {
                     </>
                   )}
 
-                  {/* KUMPULAN TOMBOL EXPORT & PRINT */}
                   {(activeTab === "nilai" ||
                     activeTab === "keuangan" ||
                     activeTab === "siswa") && (
@@ -1054,7 +1074,6 @@ export default function NinaProjectApp() {
                       >
                         <FileText size={12} /> PDF
                       </button>
-
                       <button
                         onClick={() => window.print()}
                         title="Cetak Tabel"
@@ -1062,7 +1081,6 @@ export default function NinaProjectApp() {
                       >
                         <Printer size={12} /> Print
                       </button>
-
                       <button
                         onClick={
                           activeTab === "nilai"
@@ -1081,15 +1099,10 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB 2: DATA SISWA */}
           {activeTab === "siswa" && (
-            <div className="bg-white/90 ...">
+            <div className="bg-white/90">
               <div className="w-full overflow-x-auto shadow-inner">
-                {" "}
-                {/* Tambah overflow-x-auto */}
                 <table className="w-full min-w-[600px] text-left">
-                  {" "}
-                  {/* Tambah min-w-[600px] */}
                   <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
                       <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 w-8 md:w-12 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest">
@@ -1155,15 +1168,10 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB 3: REKAP NILAI */}
           {activeTab === "nilai" && (
-            <div className="bg-white/90 ...">
+            <div className="bg-white/90">
               <div className="w-full overflow-x-auto shadow-inner">
-                {" "}
-                {/* Tambah overflow-x-auto */}
                 <table className="w-full min-w-[850px] text-left">
-                  {" "}
-                  {/* Tambah min-w-[850px] karena kolomnya banyak */}
                   <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest w-6 md:w-10">
@@ -1172,13 +1180,14 @@ export default function NinaProjectApp() {
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Siswa
                       </th>
+                      {/* TAMBAHAN HEADER TANGGAL */}
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Hafalan
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Catatan
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Ulangan Harian
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
@@ -1214,6 +1223,17 @@ export default function NinaProjectApp() {
                             <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
                               {s.kelas}
                             </span>
+                          </td>
+                          {/* KOLOM TANGGAL BISA DI KLIK & EDIT */}
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                            <EditableCell
+                              type="date"
+                              value={n.tanggal}
+                              onSave={(val) =>
+                                handleInlineNilai(s.id, "tanggal", val)
+                              }
+                              placeholder="-"
+                            />
                           </td>
                           <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
                             <EditableCell
@@ -1276,16 +1296,10 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB 4: KEUANGAN */}
           {activeTab === "keuangan" && (
-            <div className="bg-white/90 ...">
+            <div className="bg-white/90">
               <div className="w-full overflow-x-auto shadow-inner">
-                {" "}
-                {/* Tambah overflow-x-auto */}
                 <table className="w-full min-w-[1000px] text-left">
-                  {" "}
-                  {/* Tambah min-w-[1000px] agar angka rupiah tidak berantakan */}
-                  {/* CARI BAGIAN THEAD DI TAB KEUANGAN DAN GANTI DENGAN INI */}
                   <thead className="bg-slate-50/80 border-b border-slate-200">
                     <tr>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest w-6 md:w-10">
@@ -1294,21 +1308,21 @@ export default function NinaProjectApp() {
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Siswa
                       </th>
+                      {/* TAMBAHAN HEADER TANGGAL */}
+                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                        Tgl Bayar
+                      </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Infaq
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
-                        Daftar
-                        <br className="md:hidden" />
-                        Ulang
+                        Daftar Ulang
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Konsumsi
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
-                        Makan
-                        <br className="md:hidden" />
-                        Siang
+                        Makan Siang
                       </th>
                       <th className="px-1 py-2 md:px-4 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Total
@@ -1345,6 +1359,17 @@ export default function NinaProjectApp() {
                             <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
                               {s.kelas}
                             </span>
+                          </td>
+                          {/* KOLOM TANGGAL */}
+                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                            <EditableCell
+                              type="date"
+                              value={k.tanggal}
+                              onSave={(val) =>
+                                handleInlineKeuangan(s.id, "tanggal", val)
+                              }
+                              placeholder="-"
+                            />
                           </td>
                           <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
                             <EditableCell
@@ -1434,7 +1459,6 @@ export default function NinaProjectApp() {
           )}
         </main>
 
-        {/* --- ALL MODALS (FORM) COMPACT --- */}
         {modalType && modalType !== "kwitansi" && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 no-print animate-in fade-in duration-200">
             <div className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-2xl shadow-2xl w-full max-w-sm p-5 md:p-6 animate-in zoom-in-95 duration-200">
@@ -1505,6 +1529,23 @@ export default function NinaProjectApp() {
                       value={formData.nama_kelas || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, nama_kelas: e.target.value })
+                      }
+                    />
+                  </div>
+                )}
+
+                {(modalType === "nilai" || modalType === "keuangan") && (
+                  <div>
+                    <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                      Tanggal Input
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-teal-500"
+                      value={formData.tanggal || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, tanggal: e.target.value })
                       }
                     />
                   </div>
@@ -1709,9 +1750,7 @@ export default function NinaProjectApp() {
           </div>
         )}
 
-        {/* --- MODAL KWITANSI KOMPAK --- */}
         {modalType === "kwitansi" && activeSiswa && (
-          /* Tambahkan id modal-kwitansi agar CSS bisa mendeteksi modal ini aktif */
           <div
             id="modal-container-kwitansi"
             className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-300 print:p-0 print:bg-white print:static print:block"
@@ -1741,12 +1780,10 @@ export default function NinaProjectApp() {
               </button>
             </div>
 
-            {/* AREA KERTAS KWITANSI (Diperkecil max-w-sm agar pas) */}
             <div
               id="kwitansi-print-area"
               className="w-full max-w-sm md:max-w-md print:max-w-full print:w-full bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] print:shadow-none p-5 md:p-6 print:p-8 relative print-mode mt-16 md:mt-0 print:mt-0 mx-auto"
             >
-              {/* WATERMARK LUNAS / BELUM */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
                 <span
                   className={`text-[4rem] md:text-[6rem] font-black uppercase tracking-widest -rotate-[35deg] opacity-[0.04] select-none
@@ -1758,7 +1795,6 @@ export default function NinaProjectApp() {
                 </span>
               </div>
 
-              {/* KONTEN KWITANSI */}
               <div className="relative z-10">
                 <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-4 bg-white/50">
                   <div className="flex items-center gap-2.5 md:gap-3">
@@ -1786,7 +1822,6 @@ export default function NinaProjectApp() {
                   </div>
                 </div>
 
-                {/* DETAIL PENERIMA */}
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4 text-[9px] md:text-[11px]">
                   <table className="w-full text-left text-slate-800">
                     <tbody>
@@ -1814,6 +1849,25 @@ export default function NinaProjectApp() {
                       </tr>
                       <tr>
                         <td className="font-bold py-1 text-slate-500 uppercase tracking-widest">
+                          Tanggal
+                        </td>
+                        <td className="py-1 w-2 font-black text-slate-400">
+                          :
+                        </td>
+                        <td className="py-1 font-bold text-slate-800">
+                          {keuanganData[activeSiswa.id]?.tanggal
+                            ? new Date(
+                                keuanganData[activeSiswa.id]?.tanggal,
+                              ).toLocaleDateString("id-ID", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold py-1 text-slate-500 uppercase tracking-widest">
                           Metode
                         </td>
                         <td className="py-1 w-2 font-black text-slate-400">
@@ -1834,7 +1888,6 @@ export default function NinaProjectApp() {
                   </table>
                 </div>
 
-                {/* TABEL RINCIAN BIAYA */}
                 <table className="w-full border-2 border-slate-300 text-[9px] md:text-[10px] mb-6 bg-white overflow-hidden rounded-md">
                   <thead className="bg-slate-100">
                     <tr>
@@ -1899,7 +1952,6 @@ export default function NinaProjectApp() {
                   </tfoot>
                 </table>
 
-                {/* TANDA TANGAN */}
                 <div className="flex justify-end pr-2 md:pr-4 text-center">
                   <div className="flex flex-col items-center">
                     <p className="mb-0 text-[8px] md:text-[9px] uppercase text-slate-500 font-black tracking-[0.2em]">
