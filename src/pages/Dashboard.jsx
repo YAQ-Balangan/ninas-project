@@ -15,6 +15,7 @@ import {
   Banknote,
   ReceiptText,
   TrendingUp,
+  RefreshCw,
 } from "lucide-react";
 
 // KONEKSI & UTILS TERPISAH
@@ -41,6 +42,9 @@ export default function NinaProjectApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
   const [splashState, setSplashState] = useState("entering");
+
+  // FITUR REALTIME BACKGROUND
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [kelasOptions, setKelasOptions] = useState([]);
   const [siswaData, setSiswaData] = useState([]);
@@ -125,38 +129,66 @@ export default function NinaProjectApp() {
 
   const closeModal = () => window.location.replace(`#${activeTab}`);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  // LOGIKA FETCH DATA DENGAN DEEP COMPARE AGAR TIDAK KEDIP SAAT AUTO REFRESH
+  const fetchData = async (isBackground = false) => {
+    if (!isBackground) setIsLoading(true);
+    if (isBackground) setIsSyncing(true);
+
     try {
       const { data: dKelas } = await supabase
         .from("kelas")
         .select("nama_kelas");
-      if (dKelas) setKelasOptions(dKelas.map((k) => k.nama_kelas));
+      if (dKelas) {
+        const newKelasOptions = dKelas.map((k) => k.nama_kelas);
+        setKelasOptions((prev) =>
+          JSON.stringify(prev) !== JSON.stringify(newKelasOptions)
+            ? newKelasOptions
+            : prev,
+        );
+      }
 
       const { data: dSiswa } = await supabase.from("siswa").select("*");
-      if (dSiswa) setSiswaData(dSiswa);
+      if (dSiswa) {
+        setSiswaData((prev) =>
+          JSON.stringify(prev) !== JSON.stringify(dSiswa) ? dSiswa : prev,
+        );
+      }
 
       const { data: dNilai } = await supabase.from("nilai").select("*");
       if (dNilai) {
         const nData = {};
         dNilai.forEach((n) => (nData[n.siswa_id] = n));
-        setNilaiData(nData);
+        setNilaiData((prev) =>
+          JSON.stringify(prev) !== JSON.stringify(nData) ? nData : prev,
+        );
       }
 
       const { data: dKeuangan } = await supabase
         .from("keuangan")
         .select("*")
         .order("tanggal", { ascending: false });
-      if (dKeuangan) setKeuanganData(dKeuangan);
+      if (dKeuangan) {
+        setKeuanganData((prev) =>
+          JSON.stringify(prev) !== JSON.stringify(dKeuangan) ? dKeuangan : prev,
+        );
+      }
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     } finally {
       setIsLoading(false);
+      setIsSyncing(false);
     }
   };
 
+  // EFEK INTERVAL REALTIME BACKGROUND (5 DETIK)
   useEffect(() => {
-    fetchData();
+    fetchData(false); // Fetching pertama kali (dengan loading screen penuh)
+
+    const intervalId = setInterval(() => {
+      fetchData(true); // Polling background setiap 5 detik
+    }, 5000);
+
+    return () => clearInterval(intervalId); // Bersihkan interval saat keluar komponen
   }, []);
 
   const handleLogout = async () => {
@@ -267,7 +299,7 @@ export default function NinaProjectApp() {
             .select()
             .single();
           if (!error && newRow) setKeuanganData((prev) => [newRow, ...prev]);
-          else fetchData();
+          else fetchData(true);
         }
       }
     } catch (error) {
@@ -579,6 +611,14 @@ export default function NinaProjectApp() {
                   <div>
                     <p className="text-teal-100 text-xs md:text-sm font-medium mb-1 flex items-center gap-2 tracking-wide uppercase">
                       <TrendingUp size={16} /> Grand Total Dana
+                      {/* INDIKATOR SYNC DI BERANDA */}
+                      {isSyncing && (
+                        <RefreshCw
+                          size={12}
+                          className="animate-spin text-teal-200 ml-2"
+                          title="Menyinkronkan..."
+                        />
+                      )}
                     </p>
                     <h2 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-md">
                       {formatRp(grandTotalKeuangan)}
@@ -743,9 +783,17 @@ export default function NinaProjectApp() {
                     {activeTab === "keuangan" && <Wallet size={20} />}
                   </div>
                   <div>
-                    <h2 className="text-sm md:text-xl font-black text-slate-800 capitalize tracking-tight">
-                      Manajemen {activeTab}
-                    </h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm md:text-xl font-black text-slate-800 capitalize tracking-tight">
+                        Manajemen {activeTab}
+                      </h2>
+                      {/* INDIKATOR SYNC DI TAB VIEW */}
+                      {isSyncing && (
+                        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded text-[8px] md:text-[9px] font-bold uppercase tracking-widest animate-pulse">
+                          <RefreshCw size={10} className="animate-spin" /> Sync
+                        </span>
+                      )}
+                    </div>
                     <p className="text-[9px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
                       Total{" "}
                       {activeTab === "keuangan"
