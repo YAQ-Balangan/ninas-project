@@ -206,7 +206,7 @@ export default function KwitansiPrint({
                   className="w-full h-full object-cover scale-90 mix-blend-multiply"
                 />
               </div>
-              <p className="border-b-[1.5px] border-slate-800 pb-0.5 text-slate-800 font-black text-[9px] md:text-[11px] tracking-wide whitespace-nowrap">
+              <p className="text-slate-800 font-black text-[9px] md:text-[11px] tracking-wide whitespace-nowrap">
                 Nina Rahilah S.Pd.
               </p>
             </div>

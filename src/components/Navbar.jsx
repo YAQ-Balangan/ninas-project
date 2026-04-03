@@ -5,6 +5,7 @@ import {
   Users,
   GraduationCap,
   Wallet,
+  BookOpen, // Ikon baru
   Settings,
   LogOut,
 } from "lucide-react";
@@ -29,7 +30,8 @@ export default function Navbar({ activeTab, navToTab, handleLogout }) {
           </div>
           <div className="hidden md:flex items-center space-x-3">
             <div className="flex space-x-2 bg-slate-50/50 p-1.5 rounded-xl border border-white/60">
-              {["home", "siswa", "nilai", "keuangan"].map((tab) => (
+              {/* Tambahan "jurnal" di array map */}
+              {["home", "siswa", "nilai", "keuangan", "jurnal"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => navToTab(tab)}
@@ -39,13 +41,16 @@ export default function Navbar({ activeTab, navToTab, handleLogout }) {
                   {tab === "siswa" && <Users size={14} />}
                   {tab === "nilai" && <GraduationCap size={14} />}
                   {tab === "keuangan" && <Wallet size={14} />}
+                  {tab === "jurnal" && <BookOpen size={14} />}
                   {tab === "home"
                     ? "Beranda"
                     : tab === "siswa"
                       ? "Data Siswa"
                       : tab === "nilai"
                         ? "Rekap Nilai"
-                        : "Keuangan"}
+                        : tab === "keuangan"
+                          ? "Keuangan"
+                          : "Jurnal"}
                 </button>
               ))}
             </div>

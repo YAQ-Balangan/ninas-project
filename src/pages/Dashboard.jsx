@@ -16,19 +16,19 @@ import {
   ReceiptText,
   TrendingUp,
   RefreshCw,
+  BookOpen,
 } from "lucide-react";
 
-// KONEKSI & UTILS TERPISAH
 import { supabase } from "../utils/supabaseClient";
 import { formatRp, exportToCSV, formatTanggalLengkap } from "../utils/helpers";
 
-// KOMPONEN TERPISAH
 import EditableCell from "../components/EditableCell";
 import SplashScreen from "../components/SplashScreen";
 import Navbar from "../components/Navbar";
 import BottomNav from "../components/BottomNav";
 import FormModal from "../modals/FormModal";
 import KwitansiPrint from "../modals/KwitansiPrint";
+import JurnalPrint from "../modals/JurnalPrint";
 
 export default function NinaProjectApp() {
   const [activeTab, setActiveTab] = useState("home");
@@ -43,13 +43,13 @@ export default function NinaProjectApp() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [splashState, setSplashState] = useState("entering");
 
-  // FITUR REALTIME BACKGROUND
   const [isSyncing, setIsSyncing] = useState(false);
 
   const [kelasOptions, setKelasOptions] = useState([]);
   const [siswaData, setSiswaData] = useState([]);
   const [nilaiData, setNilaiData] = useState({});
   const [keuanganData, setKeuanganData] = useState([]);
+  const [jurnalData, setJurnalData] = useState({});
 
   const [formData, setFormData] = useState({});
   const [activeSiswa, setActiveSiswa] = useState(null);
@@ -110,8 +110,12 @@ export default function NinaProjectApp() {
       setFormData({ ...existData });
       window.location.hash = `${activeTab}/kwitansi`;
       return;
+    } else if (type === "cetak_jurnal") {
+      setActiveSiswa(data);
+      setFormData({ ...existData });
+      window.location.hash = `${activeTab}/cetak_jurnal`;
+      return;
     } else if (type === "siswa") {
-      // Cari ID terbesar dari data siswa yang ada, lalu tambah 1
       const nextId =
         siswaData.length > 0
           ? Math.max(...siswaData.map((s) => parseInt(s.id) || 0)) + 1
@@ -131,7 +135,6 @@ export default function NinaProjectApp() {
 
   const closeModal = () => window.location.replace(`#${activeTab}`);
 
-  // LOGIKA FETCH DATA DENGAN DEEP COMPARE AGAR TIDAK KEDIP SAAT AUTO REFRESH
   const fetchData = async (isBackground = false) => {
     if (!isBackground) setIsLoading(true);
     if (isBackground) setIsSyncing(true);
@@ -174,6 +177,17 @@ export default function NinaProjectApp() {
           JSON.stringify(prev) !== JSON.stringify(dKeuangan) ? dKeuangan : prev,
         );
       }
+
+      const { data: dJurnal } = await supabase
+        .from("jurnal_observasi")
+        .select("*");
+      if (dJurnal) {
+        const jData = {};
+        dJurnal.forEach((j) => (jData[j.siswa_id] = j));
+        setJurnalData((prev) =>
+          JSON.stringify(prev) !== JSON.stringify(jData) ? jData : prev,
+        );
+      }
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     } finally {
@@ -182,15 +196,12 @@ export default function NinaProjectApp() {
     }
   };
 
-  // EFEK INTERVAL REALTIME BACKGROUND (5 DETIK)
   useEffect(() => {
-    fetchData(false); // Fetching pertama kali (dengan loading screen penuh)
-
+    fetchData(false);
     const intervalId = setInterval(() => {
-      fetchData(true); // Polling background setiap 5 detik
+      fetchData(true);
     }, 15000);
-
-    return () => clearInterval(intervalId); // Bersihkan interval saat keluar komponen
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleLogout = async () => {
@@ -214,6 +225,19 @@ export default function NinaProjectApp() {
     const newData = { ...exist, [key]: val };
     setNilaiData((prev) => ({ ...prev, [siswaId]: newData }));
     await supabase.from("nilai").upsert({ siswa_id: siswaId, ...newData });
+  };
+
+  const handleInlineJurnal = async (siswaId, key, val) => {
+    const currentYear = new Date().getFullYear().toString();
+    const exist = jurnalData[siswaId] || {
+      siswa_id: siswaId,
+      tahun: `${currentYear}/${parseInt(currentYear) + 1}`,
+    };
+    const newData = { ...exist, [key]: val };
+    setJurnalData((prev) => ({ ...prev, [siswaId]: newData }));
+    await supabase
+      .from("jurnal_observasi")
+      .upsert({ siswa_id: siswaId, ...newData });
   };
 
   const handleInlineKeuangan = async (transaksiId, key, val) => {
@@ -360,7 +384,6 @@ export default function NinaProjectApp() {
     }
   };
 
-  // FILTER & SORT
   const filteredSiswa = useMemo(() => {
     let result = siswaData.filter((s) => {
       const matchSearch = String(s.nama || "")
@@ -414,7 +437,6 @@ export default function NinaProjectApp() {
     return { grandTotalKeuangan: total, totalCash: cash, totalTransfer: tf };
   }, [keuanganData]);
 
-  // EXPORT
   const handleExportNilai = () => {
     const rows = [
       [
@@ -527,15 +549,18 @@ export default function NinaProjectApp() {
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
           @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
           .selection-live-bg { background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #fffbeb, #f0fdfa); background-size: 400% 400%; animation: gradientBG 15s ease infinite; }
+          
           @media print {
             body, html, .selection-live-bg, main, #root, .__next { background: white !important; background-image: none !important; background-color: white !important; margin: 0 !important; padding: 0 !important; }
-            nav, .no-print, button, .fixed:not(:has(#kwitansi-print-area)), .animate-blob1, .animate-blob2, .absolute.inset-0.overflow-hidden { display: none !important; }
+            body:has(#kwitansi-print-area) main, body:has(#jurnal-print-area) main { display: none !important; }
+            nav, .no-print, button, .fixed:not(:has(#kwitansi-print-area)):not(:has(#jurnal-print-area)), .animate-blob1, .animate-blob2, .absolute.inset-0.overflow-hidden { display: none !important; }
+            
             main { display: block !important; width: 100% !important; padding: 0 !important; }
             .bg-white\\/80, .bg-white\\/90, .backdrop-blur-xl, .shadow-sm { background: transparent !important; backdrop-filter: none !important; box-shadow: none !important; border: none !important; }
             .print-kop-laporan { display: flex !important; border-bottom: 2px solid #000 !important; margin-bottom: 15px !important; padding-bottom: 10px !important; }
             main table { min-width: 100% !important; width: 100% !important; border: 1px solid #000 !important; border-collapse: collapse !important; }
             main th, main td { border: 1px solid #000 !important; padding: 6px 4px !important; color: black !important; background-color: transparent !important; position: static !important; box-shadow: none !important; }
-            body:has(#kwitansi-print-area) main { display: none !important; }
+            
             #kwitansi-print-area { display: block !important; position: relative !important; max-width: 550px !important; margin: 0 auto !important; background: white !important; }
             #kwitansi-print-area table { border: none !important; }
             #kwitansi-print-area td, #kwitansi-print-area th { border: none !important; }
@@ -587,7 +612,9 @@ export default function NinaProjectApp() {
                   ? "Data Siswa"
                   : activeTab === "nilai"
                     ? "Rekap Nilai"
-                    : "Keuangan Siswa"}
+                    : activeTab === "jurnal"
+                      ? "Jurnal Observasi"
+                      : "Keuangan Siswa"}
               </h2>
               {filterBulan && activeTab === "keuangan" && (
                 <p className="text-sm font-bold text-slate-600 uppercase mt-1">
@@ -601,7 +628,6 @@ export default function NinaProjectApp() {
             </div>
           </div>
 
-          {/* ============================== VIEW: HOME ============================== */}
           {activeTab === "home" && (
             <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
               <div className="bg-gradient-to-br from-teal-500/95 to-emerald-700/95 backdrop-blur-xl rounded-3xl p-5 md:p-8 text-white shadow-[0_20px_40px_rgba(20,184,166,0.2)] border border-white/20 relative overflow-hidden">
@@ -611,7 +637,6 @@ export default function NinaProjectApp() {
                   <div>
                     <p className="text-teal-100 text-xs md:text-sm font-medium mb-1 flex items-center gap-2 tracking-wide uppercase">
                       <TrendingUp size={16} /> Grand Total Dana
-                      {/* INDIKATOR SYNC DI BERANDA */}
                       {isSyncing && (
                         <RefreshCw
                           size={12}
@@ -667,7 +692,7 @@ export default function NinaProjectApp() {
                 <h3 className="text-[11px] md:text-sm text-slate-500 font-bold uppercase tracking-[0.2em] mb-4 pl-2">
                   Menu Cepat
                 </h3>
-                <div className="grid grid-cols-4 gap-3 md:gap-6 max-w-lg md:max-w-none mx-auto">
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3 md:gap-6 max-w-lg md:max-w-none mx-auto">
                   <button
                     onClick={() => openModal("siswa")}
                     className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(20,184,166,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
@@ -714,6 +739,18 @@ export default function NinaProjectApp() {
                     </div>
                     <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Cetak Kwitansi
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => navToTab("jurnal")}
+                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-emerald-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
+                    </div>
+                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
+                      Jurnal Observasi
                     </span>
                   </button>
                 </div>
@@ -772,7 +809,6 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* ============================== VIEW: HEADER FILTER ============================== */}
           {activeTab !== "home" && (
             <div className="no-print bg-white/80 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 p-3 md:p-5 mb-4 md:mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-4">
@@ -781,13 +817,13 @@ export default function NinaProjectApp() {
                     {activeTab === "siswa" && <Users size={20} />}
                     {activeTab === "nilai" && <FileText size={20} />}
                     {activeTab === "keuangan" && <Wallet size={20} />}
+                    {activeTab === "jurnal" && <BookOpen size={20} />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-sm md:text-xl font-black text-slate-800 capitalize tracking-tight">
                         Manajemen {activeTab}
                       </h2>
-                      {/* INDIKATOR SYNC DI TAB VIEW */}
                       {isSyncing && (
                         <span className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded text-[8px] md:text-[9px] font-bold uppercase tracking-widest animate-pulse">
                           <RefreshCw size={10} className="animate-spin" /> Sync
@@ -880,33 +916,29 @@ export default function NinaProjectApp() {
 
                   {(activeTab === "nilai" ||
                     activeTab === "keuangan" ||
-                    activeTab === "siswa") && (
+                    activeTab === "siswa" ||
+                    activeTab === "jurnal") && (
                     <div className="flex items-center gap-1 md:gap-2 ml-auto md:ml-2 bg-slate-50 p-1 rounded-lg md:rounded-xl border border-slate-200">
                       <button
                         onClick={() => window.print()}
-                        title="Simpan sebagai PDF"
-                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 md:gap-1.5 shadow-sm transition-all"
+                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-rose-600 hover:bg-rose-50 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-sm transition-all"
                       >
                         <FileText size={12} /> PDF
                       </button>
                       <button
                         onClick={() => window.print()}
-                        title="Cetak Tabel"
-                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-teal-600 hover:bg-teal-50 hover:text-teal-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 md:gap-1.5 shadow-sm transition-all"
+                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-teal-600 hover:bg-teal-50 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-sm transition-all"
                       >
                         <Printer size={12} /> Print
                       </button>
-                      <button
-                        onClick={
-                          activeTab === "nilai"
-                            ? handleExportNilai
-                            : handleExportKeuangan
-                        }
-                        title="Download file Excel"
-                        className="px-2 py-1.5 md:px-3 md:py-2 bg-slate-800 text-white hover:bg-slate-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 md:gap-1.5 shadow-md transition-all"
-                      >
-                        <Download size={12} /> Excel
-                      </button>
+                      {(activeTab === "nilai" || activeTab === "keuangan") && (
+                        <button
+                          onClick={activeTab === "nilai" ? handleExportNilai : handleExportKeuangan}
+                          className="px-2 py-1.5 md:px-3 md:py-2 bg-slate-800 text-white hover:bg-slate-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-md transition-all"
+                        >
+                          <Download size={12} /> Excel
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -914,74 +946,33 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* ============================== VIEW: TAB SISWA ============================== */}
           {activeTab === "siswa" && (
             <div className="bg-white/90">
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[600px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        No
-                      </th>
-                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-5 py-2 md:py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Nama Lengkap
-                      </th>
-                      <th className="px-2 md:px-5 py-2 md:py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest w-24 md:w-48 whitespace-nowrap">
-                        Kelas
-                      </th>
-                      <th className="px-2 md:px-5 py-2 md:py-4 text-slate-500 text-center w-32 md:w-48 text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
-                        Aksi
-                      </th>
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">No</th>
+                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-5 py-2 md:py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Nama Lengkap</th>
+                      <th className="px-2 md:px-5 py-2 md:py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest w-24 md:w-48 whitespace-nowrap">Kelas</th>
+                      <th className="px-2 md:px-5 py-2 md:py-4 text-slate-500 text-center w-32 md:w-48 text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredSiswa.map((s, idx) => (
-                      <tr
-                        key={s.id}
-                        className="group hover:bg-teal-50/30 transition-colors"
-                      >
-                        <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-2 md:py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
-                          {idx + 1}
-                        </td>
+                      <tr key={s.id} className="group hover:bg-teal-50/30 transition-colors">
+                        <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-2 md:py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">{idx + 1}</td>
                         <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-5 py-2 md:py-3 text-slate-800 font-semibold text-left whitespace-nowrap">
-                          <EditableCell
-                            value={s.nama}
-                            onSave={(val) =>
-                              handleInlineSiswa(s.id, "nama", val)
-                            }
-                          />
+                          <EditableCell value={s.nama} onSave={(val) => handleInlineSiswa(s.id, "nama", val)} />
                         </td>
                         <td className="px-2 md:px-5 py-2 md:py-3 whitespace-nowrap">
-                          <EditableCell
-                            type="select"
-                            options={kelasOptions}
-                            value={s.kelas}
-                            onSave={(val) =>
-                              handleInlineSiswa(s.id, "kelas", val)
-                            }
-                          />
+                          <EditableCell type="select" options={kelasOptions} value={s.kelas} onSave={(val) => handleInlineSiswa(s.id, "kelas", val)} />
                         </td>
                         <td className="px-2 md:px-5 py-2 md:py-3 text-center no-print whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1 md:gap-1.5">
-                            <button
-                              onClick={() => openModal("bayar_baru", s)}
-                              className="px-2 py-1 md:px-3 md:py-1.5 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
-                            >
-                              Bayar
-                            </button>
-                            <button
-                              onClick={() => openModal("siswa", s)}
-                              className="p-1.5 md:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md md:rounded-lg transition-colors"
-                            >
-                              <Edit size={12} className="md:w-3.5 md:h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteSiswa(s.id)}
-                              className="p-1.5 md:p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md md:rounded-lg transition-colors"
-                            >
-                              <Trash2 size={12} className="md:w-3.5 md:h-3.5" />
-                            </button>
+                            <button onClick={() => openModal("bayar_baru", s)} className="px-2 py-1 md:px-3 md:py-1.5 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase">Bayar</button>
+                            <button onClick={() => openModal("siswa", s)} className="p-1.5 md:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md md:rounded-lg transition-colors"><Edit size={12} className="md:w-3.5 md:h-3.5" /></button>
+                            <button onClick={() => handleDeleteSiswa(s.id)} className="p-1.5 md:p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md md:rounded-lg transition-colors"><Trash2 size={12} className="md:w-3.5 md:h-3.5" /></button>
                           </div>
                         </td>
                       </tr>
@@ -989,65 +980,28 @@ export default function NinaProjectApp() {
                   </tbody>
                 </table>
               </div>
-
               <div className="md:hidden print:hidden flex flex-col gap-3 p-3">
                 {filteredSiswa.map((s, idx) => (
-                  <div
-                    key={s.id}
-                    className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-2"
-                  >
+                  <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-2">
                     <div className="flex items-center gap-2 mb-1 border-b border-slate-100 pb-2">
-                      <div className="w-6 h-6 bg-teal-100 text-teal-700 rounded-md flex items-center justify-center text-[10px] font-black">
-                        {idx + 1}
-                      </div>
-                      <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">
-                        Data Siswa
-                      </span>
+                      <div className="w-6 h-6 bg-teal-100 text-teal-700 rounded-md flex items-center justify-center text-[10px] font-black">{idx + 1}</div>
+                      <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">Data Siswa</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[8px] text-slate-400 uppercase font-black tracking-widest block mb-0.5">
-                          Nama
-                        </span>
-                        <EditableCell
-                          value={s.nama}
-                          onSave={(val) => handleInlineSiswa(s.id, "nama", val)}
-                        />
+                        <span className="text-[8px] text-slate-400 uppercase font-black tracking-widest block mb-0.5">Nama</span>
+                        <EditableCell value={s.nama} onSave={(val) => handleInlineSiswa(s.id, "nama", val)} />
                       </div>
                       <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[8px] text-slate-400 uppercase font-black tracking-widest block mb-0.5">
-                          Kelas
-                        </span>
-                        <EditableCell
-                          type="select"
-                          options={kelasOptions}
-                          value={s.kelas}
-                          onSave={(val) =>
-                            handleInlineSiswa(s.id, "kelas", val)
-                          }
-                        />
+                        <span className="text-[8px] text-slate-400 uppercase font-black tracking-widest block mb-0.5">Kelas</span>
+                        <EditableCell type="select" options={kelasOptions} value={s.kelas} onSave={(val) => handleInlineSiswa(s.id, "kelas", val)} />
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-1">
-                      <button
-                        onClick={() => openModal("bayar_baru", s)}
-                        className="px-4 py-2 bg-teal-50 text-teal-700 font-bold rounded-lg text-[10px] tracking-widest uppercase border border-teal-100 flex-1 mr-2 flex justify-center"
-                      >
-                        Bayar Uang
-                      </button>
+                      <button onClick={() => openModal("bayar_baru", s)} className="px-4 py-2 bg-teal-50 text-teal-700 font-bold rounded-lg text-[10px] tracking-widest uppercase border border-teal-100 flex-1 mr-2 flex justify-center">Bayar Uang</button>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => openModal("siswa", s)}
-                          className="p-2 text-blue-600 bg-blue-50 border border-blue-100 rounded-lg"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSiswa(s.id)}
-                          className="p-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-lg"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <button onClick={() => openModal("siswa", s)} className="p-2 text-blue-600 bg-blue-50 border border-blue-100 rounded-lg"><Edit size={14} /></button>
+                        <button onClick={() => handleDeleteSiswa(s.id)} className="p-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-lg"><Trash2 size={14} /></button>
                       </div>
                     </div>
                   </div>
@@ -1056,418 +1010,85 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* ============================== VIEW: TAB NILAI ============================== */}
           {activeTab === "nilai" && (
             <div className="bg-white/90">
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[850px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        No
-                      </th>
-                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
-                        Siswa
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Hafalan
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Catatan
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
-                        Ulangan Harian
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Ujian
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
-                        Rata-Rata
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Ket.
-                      </th>
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">No</th>
+                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Siswa</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Hafalan</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Catatan</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Ulangan Harian</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ujian</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Rata-Rata</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ket.</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredSiswa.map((s, idx) => {
                       const n = nilaiData[s.id] || {};
-                      const rata =
-                        ((Number(n.hafalan) || 0) +
-                          (Number(n.catatan) || 0) +
-                          (Number(n.ulangan) || 0) +
-                          (Number(n.ujian) || 0)) /
-                        4;
+                      const rata = ((Number(n.hafalan) || 0) + (Number(n.catatan) || 0) + (Number(n.ulangan) || 0) + (Number(n.ujian) || 0)) / 4;
                       return (
-                        <tr
-                          key={s.id}
-                          className="group hover:bg-teal-50/30 transition-colors"
-                        >
-                          <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold whitespace-nowrap">
-                            {idx + 1}
-                          </td>
-                          <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight whitespace-nowrap">
-                            {s.nama} <br />
-                            <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
-                              {s.kelas}
-                            </span>
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
-                            <EditableCell
-                              alignCenter={true}
-                              type="number"
-                              value={n.hafalan}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "hafalan", val)
-                              }
-                              placeholder="-"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
-                            <EditableCell
-                              alignCenter={true}
-                              type="number"
-                              value={n.catatan}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "catatan", val)
-                              }
-                              placeholder="-"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
-                            <EditableCell
-                              alignCenter={true}
-                              type="number"
-                              value={n.ulangan}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "ulangan", val)
-                              }
-                              placeholder="-"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
-                            <EditableCell
-                              alignCenter={true}
-                              type="number"
-                              value={n.ujian}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "ujian", val)
-                              }
-                              placeholder="-"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-teal-700 bg-teal-50/50 text-center text-[10px] md:text-xs font-bold whitespace-nowrap">
-                            {rata > 0 ? rata.toFixed(1) : "-"}
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
-                            <EditableCell
-                              alignCenter={true}
-                              value={n.keterangan}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "keterangan", val)
-                              }
-                              placeholder="..."
-                            />
-                          </td>
+                        <tr key={s.id} className="group hover:bg-teal-50/30 transition-colors">
+                          <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold whitespace-nowrap">{idx + 1}</td>
+                          <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight whitespace-nowrap">{s.nama} <br /><span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">{s.kelas}</span></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="number" value={n.hafalan} onSave={(val) => handleInlineNilai(s.id, "hafalan", val)} placeholder="-" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="number" value={n.catatan} onSave={(val) => handleInlineNilai(s.id, "catatan", val)} placeholder="-" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="number" value={n.ulangan} onSave={(val) => handleInlineNilai(s.id, "ulangan", val)} placeholder="-" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="number" value={n.ujian} onSave={(val) => handleInlineNilai(s.id, "ujian", val)} placeholder="-" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-teal-700 bg-teal-50/50 text-center text-[10px] md:text-xs font-bold whitespace-nowrap">{rata > 0 ? rata.toFixed(1) : "-"}</td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} value={n.keterangan} onSave={(val) => handleInlineNilai(s.id, "keterangan", val)} placeholder="..." /></td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-
-              <div className="md:hidden print:hidden flex flex-col gap-3 p-3">
-                {filteredSiswa.map((s, idx) => {
-                  const n = nilaiData[s.id] || {};
-                  const rata =
-                    ((Number(n.hafalan) || 0) +
-                      (Number(n.catatan) || 0) +
-                      (Number(n.ulangan) || 0) +
-                      (Number(n.ujian) || 0)) /
-                    4;
-                  return (
-                    <div
-                      key={s.id}
-                      className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-2"
-                    >
-                      <div className="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-blue-100 text-blue-700 rounded-md flex items-center justify-center text-[10px] font-black">
-                            {idx + 1}
-                          </div>
-                          <div>
-                            <span className="font-bold text-xs text-slate-800">
-                              {s.nama}
-                            </span>
-                            <span className="block text-[9px] text-slate-400 uppercase tracking-widest">
-                              {s.kelas}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 text-[10px] font-bold">
-                          Rata: {rata > 0 ? rata.toFixed(1) : "-"}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mb-1">
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
-                          <span className="text-[9px] text-slate-500 font-bold uppercase">
-                            Hafalan
-                          </span>
-                          <div className="w-12">
-                            <EditableCell
-                              alignCenter
-                              type="number"
-                              value={n.hafalan}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "hafalan", val)
-                              }
-                              placeholder="-"
-                            />
-                          </div>
-                        </div>
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
-                          <span className="text-[9px] text-slate-500 font-bold uppercase">
-                            Catatan
-                          </span>
-                          <div className="w-12">
-                            <EditableCell
-                              alignCenter
-                              type="number"
-                              value={n.catatan}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "catatan", val)
-                              }
-                              placeholder="-"
-                            />
-                          </div>
-                        </div>
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
-                          <span className="text-[9px] text-slate-500 font-bold uppercase">
-                            Ulangan
-                          </span>
-                          <div className="w-12">
-                            <EditableCell
-                              alignCenter
-                              type="number"
-                              value={n.ulangan}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "ulangan", val)
-                              }
-                              placeholder="-"
-                            />
-                          </div>
-                        </div>
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
-                          <span className="text-[9px] text-slate-500 font-bold uppercase">
-                            Ujian
-                          </span>
-                          <div className="w-12">
-                            <EditableCell
-                              alignCenter
-                              type="number"
-                              value={n.ujian}
-                              onSave={(val) =>
-                                handleInlineNilai(s.id, "ujian", val)
-                              }
-                              placeholder="-"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
-                        <span className="text-[9px] text-slate-500 font-bold uppercase">
-                          Keterangan
-                        </span>
-                        <div className="flex-1 ml-2">
-                          <EditableCell
-                            value={n.keterangan}
-                            onSave={(val) =>
-                              handleInlineNilai(s.id, "keterangan", val)
-                            }
-                            placeholder="Ketik catatan..."
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           )}
 
-          {/* ============================== VIEW: TAB KEUANGAN ============================== */}
           {activeTab === "keuangan" && (
             <div className="bg-white/90">
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[1000px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        No
-                      </th>
-                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
-                        Siswa
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Tgl Bayar
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Infaq
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
-                        Daftar Ulang
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Konsumsi
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
-                        Makan Siang
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Total
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Metode
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
-                        Status
-                      </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
-                        Aksi
-                      </th>
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">No</th>
+                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Siswa</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tgl Bayar</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Infaq</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Daftar Ulang</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Konsumsi</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Makan Siang</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Total</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Metode</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Status</th>
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredKeuangan.map((k, idx) => {
-                      const s =
-                        siswaData.find((siswa) => siswa.id === k.siswa_id) ||
-                        {};
-                      const total =
-                        (Number(k.infaq) || 0) +
-                        (Number(k.cicilan) || 0) +
-                        (Number(k.konsumsi) || 0) +
-                        (Number(k.makan) || 0);
+                      const s = siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
+                      const total = (Number(k.infaq) || 0) + (Number(k.cicilan) || 0) + (Number(k.konsumsi) || 0) + (Number(k.makan) || 0);
                       return (
-                        <tr
-                          key={k.id || idx}
-                          className="group hover:bg-teal-50/30 transition-colors"
-                        >
-                          <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold whitespace-nowrap">
-                            {idx + 1}
-                          </td>
-                          <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight whitespace-nowrap">
-                            {s.nama || "Siswa Dihapus"} <br />
-                            <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
-                              {s.kelas || "-"}
-                            </span>
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
-                            <EditableCell
-                              alignCenter={true}
-                              type="date"
-                              value={k.tanggal}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "tanggal", val)
-                              }
-                              placeholder="-"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap">
-                            <EditableCell
-                              type="number"
-                              isCurrency
-                              value={k.infaq}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "infaq", val)
-                              }
-                              placeholder="0"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap">
-                            <EditableCell
-                              type="number"
-                              isCurrency
-                              value={k.cicilan}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "cicilan", val)
-                              }
-                              placeholder="0"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap">
-                            <EditableCell
-                              type="number"
-                              isCurrency
-                              value={k.konsumsi}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "konsumsi", val)
-                              }
-                              placeholder="0"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap">
-                            <EditableCell
-                              type="number"
-                              isCurrency
-                              value={k.makan}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "makan", val)
-                              }
-                              placeholder="0"
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-teal-700 bg-teal-50/50 text-right text-[10px] md:text-xs font-bold whitespace-nowrap">
-                            {formatRp(total)}
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
-                            <EditableCell
-                              type="select"
-                              options={["Cash", "Transfer"]}
-                              value={k.metode || "Cash"}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "metode", val)
-                              }
-                            />
-                          </td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
-                            <EditableCell
-                              type="select"
-                              options={["Belum", "Sudah"]}
-                              value={k.status || "Belum"}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "status", val)
-                              }
-                            />
-                          </td>
+                        <tr key={k.id || idx} className="group hover:bg-teal-50/30 transition-colors">
+                          <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold whitespace-nowrap">{idx + 1}</td>
+                          <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight whitespace-nowrap">{s.nama || "Siswa Dihapus"} <br /><span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">{s.kelas || "-"}</span></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="date" value={k.tanggal} onSave={(val) => handleInlineKeuangan(k.id, "tanggal", val)} placeholder="-" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap"><EditableCell type="number" isCurrency value={k.infaq} onSave={(val) => handleInlineKeuangan(k.id, "infaq", val)} placeholder="0" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap"><EditableCell type="number" isCurrency value={k.cicilan} onSave={(val) => handleInlineKeuangan(k.id, "cicilan", val)} placeholder="0" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap"><EditableCell type="number" isCurrency value={k.konsumsi} onSave={(val) => handleInlineKeuangan(k.id, "konsumsi", val)} placeholder="0" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap"><EditableCell type="number" isCurrency value={k.makan} onSave={(val) => handleInlineKeuangan(k.id, "makan", val)} placeholder="0" /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-teal-700 bg-teal-50/50 text-right text-[10px] md:text-xs font-bold whitespace-nowrap">{formatRp(total)}</td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell type="select" options={["Cash", "Transfer"]} value={k.metode || "Cash"} onSave={(val) => handleInlineKeuangan(k.id, "metode", val)} /></td>
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell type="select" options={["Belum", "Sudah"]} value={k.status || "Belum"} onSave={(val) => handleInlineKeuangan(k.id, "status", val)} /></td>
                           <td className="px-1 md:px-4 py-1.5 md:py-3 text-center no-print whitespace-nowrap">
                             <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => openModal("kwitansi", s, k)}
-                                title="Cetak Kwitansi"
-                                className="p-1 md:p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
-                              >
-                                <ReceiptText
-                                  size={12}
-                                  className="md:w-3.5 md:h-3.5"
-                                />
-                              </button>
-                              <button
-                                onClick={() => openModal("edit_keuangan", s, k)}
-                                title="Edit Transaksi"
-                                className="p-1 md:p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
-                              >
-                                <Edit size={12} className="md:w-3.5 md:h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteKeuangan(k.id)}
-                                title="Hapus Transaksi"
-                                className="p-1 md:p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
-                              >
-                                <Trash2
-                                  size={12}
-                                  className="md:w-3.5 md:h-3.5"
-                                />
-                              </button>
+                              <button onClick={() => openModal("kwitansi", s, k)} className="p-1 md:p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-md md:rounded-lg"><ReceiptText size={12} className="md:w-3.5 md:h-3.5" /></button>
+                              <button onClick={() => openModal("edit_keuangan", s, k)} className="p-1 md:p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md md:rounded-lg"><Edit size={12} className="md:w-3.5 md:h-3.5" /></button>
+                              <button onClick={() => handleDeleteKeuangan(k.id)} className="p-1 md:p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-md md:rounded-lg"><Trash2 size={12} className="md:w-3.5 md:h-3.5" /></button>
                             </div>
                           </td>
                         </tr>
@@ -1476,171 +1097,82 @@ export default function NinaProjectApp() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
 
-              <div className="md:hidden print:hidden flex flex-col gap-3 p-3">
-                {filteredKeuangan.map((k, idx) => {
-                  const s =
-                    siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
-                  const total =
-                    (Number(k.infaq) || 0) +
-                    (Number(k.cicilan) || 0) +
-                    (Number(k.konsumsi) || 0) +
-                    (Number(k.makan) || 0);
+          {activeTab === "jurnal" && (
+            <div className="bg-white/90">
+              <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner rounded-xl border border-slate-200">
+                <table className="w-full min-w-[900px] text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-4 text-slate-500 text-center text-xs font-bold uppercase tracking-widest">No</th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-48">Siswa</th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-28">Tahun</th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-1/4">Potensi</th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-1/4">Catatan Observasi</th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-1/4">Rekomendasi</th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-xs font-bold uppercase tracking-widest no-print">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredSiswa.map((s, idx) => {
+                      const j = jurnalData[s.id] || {};
+                      return (
+                        <tr key={s.id} className="group hover:bg-teal-50/30 transition-colors align-top">
+                          <td className="px-4 py-3 text-slate-500 text-center text-xs font-semibold">{idx + 1}</td>
+                          <td className="px-4 py-3 text-slate-800 text-xs font-bold">{s.nama} <br /><span className="text-[9px] text-slate-400 tracking-widest uppercase">{s.kelas}</span></td>
+                          <td className="px-4 py-3 text-sm"><EditableCell value={j.tahun} onSave={(val) => handleInlineJurnal(s.id, "tahun", val)} placeholder="2025/2026" /></td>
+                          <td className="px-4 py-3 text-sm"><EditableCell value={j.potensi} onSave={(val) => handleInlineJurnal(s.id, "potensi", val)} placeholder="Tulis potensi..." /></td>
+                          <td className="px-4 py-3 text-sm"><EditableCell value={j.catatan_observasi} onSave={(val) => handleInlineJurnal(s.id, "catatan_observasi", val)} placeholder="Tulis catatan..." /></td>
+                          <td className="px-4 py-3 text-sm"><EditableCell value={j.rekomendasi} onSave={(val) => handleInlineJurnal(s.id, "rekomendasi", val)} placeholder="Tulis rekomendasi..." /></td>
+                          <td className="px-4 py-3 text-center no-print align-middle">
+                            <button onClick={() => openModal("cetak_jurnal", s, j)} className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-teal-200 transition-colors uppercase flex items-center justify-center gap-1 mx-auto">
+                              <Printer size={14} /> Lihat
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="md:hidden print:hidden flex flex-col gap-4 p-3">
+                {filteredSiswa.map((s, idx) => {
+                  const j = jurnalData[s.id] || {};
                   return (
-                    <div
-                      key={k.id || idx}
-                      className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-2"
-                    >
-                      <div className="flex justify-between items-center mb-1 border-b border-slate-100 pb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-amber-100 text-amber-700 rounded-md flex items-center justify-center text-[10px] font-black">
-                            {idx + 1}
-                          </div>
+                    <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col gap-3">
+                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-teal-100 text-teal-700 rounded-lg flex items-center justify-center text-xs font-black">{idx + 1}</div>
                           <div>
-                            <span className="font-bold text-xs text-slate-800">
-                              {s.nama || "Siswa Dihapus"}
-                            </span>
-                            <span className="block text-[9px] text-slate-400 uppercase tracking-widest">
-                              {s.kelas || "-"}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex gap-1.5">
-                          <button
-                            onClick={() => openModal("edit_keuangan", s, k)}
-                            className="p-1.5 bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100 rounded-md flex items-center shadow-sm"
-                          >
-                            <Edit size={12} />
-                          </button>
-                          <button
-                            onClick={() => openModal("kwitansi", s, k)}
-                            className="p-1.5 bg-teal-50 text-teal-600 border border-teal-100 hover:bg-teal-100 rounded-md flex items-center gap-1 shadow-sm"
-                          >
-                            <ReceiptText size={12} />{" "}
-                            <span className="text-[9px] font-bold">Cetak</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col bg-slate-50 p-2.5 rounded-lg border border-slate-100 mb-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-[9px] text-slate-500 font-bold uppercase">
-                            Tgl Bayar
-                          </span>
-                          <div className="min-w-[120px] flex justify-end text-teal-700 font-bold text-[10px] tracking-wide">
-                            <EditableCell
-                              alignCenter={false}
-                              type="date"
-                              value={k.tanggal}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "tanggal", val)
-                              }
-                              placeholder="-"
-                              useLongDate={true}
-                            />
-                          </div>
-                        </div>
-                        <span className="text-teal-700 font-bold text-[10px] tracking-wide text-right">
-                          {formatTanggalLengkap(k.tanggal)}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 mb-1">
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col">
-                          <span className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mb-1">
-                            Infaq Pendidikan
-                          </span>
-                          <EditableCell
-                            type="number"
-                            isCurrency
-                            value={k.infaq}
-                            onSave={(val) =>
-                              handleInlineKeuangan(k.id, "infaq", val)
-                            }
-                            placeholder="0"
-                          />
-                        </div>
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col">
-                          <span className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mb-1">
-                            Daftar Ulang
-                          </span>
-                          <EditableCell
-                            type="number"
-                            isCurrency
-                            value={k.cicilan}
-                            onSave={(val) =>
-                              handleInlineKeuangan(k.id, "cicilan", val)
-                            }
-                            placeholder="0"
-                          />
-                        </div>
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col">
-                          <span className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mb-1">
-                            Konsumsi
-                          </span>
-                          <EditableCell
-                            type="number"
-                            isCurrency
-                            value={k.konsumsi}
-                            onSave={(val) =>
-                              handleInlineKeuangan(k.id, "konsumsi", val)
-                            }
-                            placeholder="0"
-                          />
-                        </div>
-                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col">
-                          <span className="text-[8px] text-slate-400 uppercase tracking-widest font-bold mb-1">
-                            Makan Siang
-                          </span>
-                          <EditableCell
-                            type="number"
-                            isCurrency
-                            value={k.makan}
-                            onSave={(val) =>
-                              handleInlineKeuangan(k.id, "makan", val)
-                            }
-                            placeholder="0"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center bg-teal-50 p-2 rounded-lg border border-teal-100 mb-1">
-                        <span className="text-[10px] text-teal-800 font-black uppercase tracking-widest">
-                          Total Bayar
-                        </span>
-                        <span className="text-[12px] text-teal-700 font-black">
-                          {formatRp(total)}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100 flex justify-between items-center">
-                          <div className="w-full">
-                            <EditableCell
-                              alignCenter
-                              type="select"
-                              options={["Cash", "Transfer"]}
-                              value={k.metode || "Cash"}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "metode", val)
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="bg-slate-50 p-1.5 rounded-lg border border-slate-100 flex justify-between items-center">
-                          <div className="w-full">
-                            <EditableCell
-                              alignCenter
-                              type="select"
-                              options={["Belum", "Sudah"]}
-                              value={k.status || "Belum"}
-                              onSave={(val) =>
-                                handleInlineKeuangan(k.id, "status", val)
-                              }
-                            />
+                            <span className="font-bold text-sm text-slate-800">{s.nama}</span>
+                            <span className="block text-[10px] text-slate-400 uppercase tracking-widest">{s.kelas}</span>
                           </div>
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Tahun Ajaran</span>
+                          <EditableCell value={j.tahun} onSave={(val) => handleInlineJurnal(s.id, "tahun", val)} placeholder="2025/2026" />
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Potensi</span>
+                          <EditableCell value={j.potensi} onSave={(val) => handleInlineJurnal(s.id, "potensi", val)} placeholder="Ketik potensi..." />
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Catatan Observasi</span>
+                          <EditableCell value={j.catatan_observasi} onSave={(val) => handleInlineJurnal(s.id, "catatan_observasi", val)} placeholder="Ketik catatan..." />
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Rekomendasi</span>
+                          <EditableCell value={j.rekomendasi} onSave={(val) => handleInlineJurnal(s.id, "rekomendasi", val)} placeholder="Ketik rekomendasi..." />
+                        </div>
+                      </div>
+                      <button onClick={() => openModal("cetak_jurnal", s, j)} className="w-full mt-2 py-2.5 bg-teal-600 text-white font-bold rounded-lg text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-md">
+                        <Printer size={16} /> Cetak Jurnal A4
+                      </button>
                     </div>
                   );
                 })}
@@ -1649,25 +1181,16 @@ export default function NinaProjectApp() {
           )}
         </main>
 
-        {/* ============================== MODALS ============================== */}
-        <FormModal
-          modalType={modalType}
-          formData={formData}
-          setFormData={setFormData}
-          handleSaveData={handleSaveData}
-          closeModal={closeModal}
-          kelasOptions={kelasOptions}
-        />
+        {modalType && !["kwitansi", "cetak_jurnal"].includes(modalType) && (
+          <FormModal modalType={modalType} formData={formData} setFormData={setFormData} handleSaveData={handleSaveData} closeModal={closeModal} kelasOptions={kelasOptions} />
+        )}
 
         {modalType === "kwitansi" && activeSiswa && formData && (
-          <KwitansiPrint
-            activeSiswa={activeSiswa}
-            formData={formData}
-            getNomorKwitansi={getNomorKwitansi}
-            handleDownloadImage={handleDownloadImage}
-            isCapturing={isCapturing}
-            closeModal={closeModal}
-          />
+          <KwitansiPrint activeSiswa={activeSiswa} formData={formData} getNomorKwitansi={getNomorKwitansi} handleDownloadImage={handleDownloadImage} isCapturing={isCapturing} closeModal={closeModal} />
+        )}
+
+        {modalType === "cetak_jurnal" && activeSiswa && formData && (
+          <JurnalPrint activeSiswa={activeSiswa} jurnalData={formData} closeModal={closeModal} />
         )}
       </div>
     </>
