@@ -1,8 +1,8 @@
+// File: src/pages/Dashboard.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { toPng } from "html-to-image";
 import {
   Users,
-  Settings,
   Wallet,
   Plus,
   Search,
@@ -10,202 +10,25 @@ import {
   Trash2,
   Printer,
   Download,
-  Save,
-  X,
-  CheckCircle2,
-  AlertCircle,
   FileText,
-  Home,
   UserPlus,
   Banknote,
   ReceiptText,
-  GraduationCap,
   TrendingUp,
-  CreditCard,
-  Camera,
-  LogOut,
 } from "lucide-react";
 
-// ==========================================
-// KONEKSI SUPABASE
-// ==========================================
+// KONEKSI & UTILS TERPISAH
 import { supabase } from "../utils/supabaseClient";
+import { formatRp, exportToCSV, formatTanggalLengkap } from "../utils/helpers";
 
-// --- UTILS: Format Rupiah & Export ---
-const formatRp = (angka) => {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(angka || 0);
-};
+// KOMPONEN TERPISAH
+import EditableCell from "../components/EditableCell";
+import SplashScreen from "../components/SplashScreen";
+import Navbar from "../components/Navbar";
+import BottomNav from "../components/BottomNav";
+import FormModal from "../modals/FormModal";
+import KwitansiPrint from "../modals/KwitansiPrint";
 
-const exportToCSV = (filename, rows) => {
-  const csvContent =
-    "data:text/csv;charset=utf-8," + rows.map((e) => e.join(",")).join("\n");
-  const encodedUri = encodeURI(csvContent);
-  const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", filename + ".csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-// --- UTILS: FORMAT TANGGAL LENGKAP (ID) ---
-const formatTanggalLengkap = (tanggalStr) => {
-  if (!tanggalStr) return "-";
-  const dateObj = new Date(tanggalStr);
-
-  const namaHari = [
-    "Minggu",
-    "Senin",
-    "Selasa",
-    "Rabu",
-    "Kamis",
-    "Jumat",
-    "Sabtu",
-  ];
-  const namaBulan = [
-    "Januari",
-    "Februari",
-    "Maret",
-    "April",
-    "Mei",
-    "Juni",
-    "Juli",
-    "Agustus",
-    "September",
-    "Oktober",
-    "November",
-    "Desember",
-  ];
-
-  const hari = namaHari[dateObj.getDay()];
-  const tanggal = dateObj.getDate();
-  const bulan = namaBulan[dateObj.getMonth()];
-  const tahun = dateObj.getFullYear();
-
-  return `${hari}, ${tanggal} ${bulan} ${tahun}`;
-};
-
-// --- UTILS: AUTO RIBUAN ---
-const autoRibuan = (val) => {
-  if (!val) return val;
-  const strVal = String(val).trim();
-  let num = parseFloat(strVal);
-  if (num > 0 && num < 10000 && !strVal.endsWith("000")) {
-    return (num * 1000).toString();
-  }
-  return strVal;
-};
-
-// ==========================================
-// KOMPONEN INLINE EDIT
-// ==========================================
-const EditableCell = ({
-  value,
-  type = "text",
-  options = [],
-  onSave,
-  placeholder = "Kosong...",
-  isCurrency = false,
-  alignCenter = false,
-  useLongDate = false,
-}) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [val, setVal] = useState(value ?? "");
-
-  useEffect(() => {
-    setVal(value ?? "");
-  }, [value]);
-
-  const triggerSave = () => {
-    setIsEditing(false);
-    let finalVal = val;
-    if (type === "number" && isCurrency) finalVal = autoRibuan(val);
-
-    if (String(finalVal).trim() !== String(value || "").trim()) {
-      onSave(type === "number" ? parseFloat(finalVal) || 0 : finalVal);
-    }
-  };
-
-  if (isEditing) {
-    if (type === "select") {
-      return (
-        <select
-          autoFocus
-          className={`w-full p-1.5 border-2 border-teal-500 rounded-lg outline-none text-[10px] md:text-xs text-teal-900 bg-white shadow-sm min-w-[70px] md:min-w-[90px] ${alignCenter ? "text-center" : ""}`}
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          onBlur={triggerSave}
-          onKeyDown={(e) => e.key === "Enter" && triggerSave()}
-        >
-          <option value="">Pilih...</option>
-          {options.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-      );
-    }
-    return (
-      <input
-        autoFocus
-        type={type}
-        className={`w-full p-1.5 border-2 border-teal-500 rounded-lg outline-none text-[10px] md:text-xs text-teal-900 bg-white shadow-sm min-w-[50px] md:min-w-[70px] ${alignCenter ? "text-center" : ""}`}
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={triggerSave}
-        onKeyDown={(e) => e.key === "Enter" && triggerSave()}
-        placeholder={placeholder}
-      />
-    );
-  }
-
-  let displayValue = value;
-  if (isCurrency && value) displayValue = formatRp(value);
-  if (type === "date" && value) {
-    displayValue = useLongDate
-      ? formatTanggalLengkap(value)
-      : new Date(value).toLocaleDateString("id-ID", {
-          day: "2-digit",
-          month: "short",
-          year: "2-digit",
-        });
-  }
-  if (type === "select" && value === "Sudah") {
-    displayValue = (
-      <span className="text-teal-600 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold whitespace-nowrap">
-        <CheckCircle2 size={12} /> Lunas
-      </span>
-    );
-  } else if (type === "select" && value === "Belum") {
-    displayValue = (
-      <span className="text-amber-500 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold whitespace-nowrap">
-        <AlertCircle size={12} /> Belum
-      </span>
-    );
-  }
-
-  return (
-    <div
-      onClick={() => setIsEditing(true)}
-      className={`w-full min-h-[24px] cursor-text hover:bg-teal-50/50 hover:ring-1 hover:ring-teal-200 rounded-md px-1 flex items-center transition-all duration-200 text-slate-700 text-[10px] md:text-sm font-medium ${alignCenter ? "justify-center text-center" : ""}`}
-    >
-      {displayValue || (
-        <span className="text-slate-300 italic text-[9px] md:text-xs">
-          {placeholder}
-        </span>
-      )}
-    </div>
-  );
-};
-
-// ==========================================
-// KOMPONEN UTAMA Nina Rahell Project
-// ==========================================
 export default function NinaProjectApp() {
   const [activeTab, setActiveTab] = useState("home");
   const [modalType, setModalType] = useState(null);
@@ -222,7 +45,6 @@ export default function NinaProjectApp() {
   const [kelasOptions, setKelasOptions] = useState([]);
   const [siswaData, setSiswaData] = useState([]);
   const [nilaiData, setNilaiData] = useState({});
-  // PERUBAHAN: keuanganData sekarang berupa Array (Riwayat Transaksi)
   const [keuanganData, setKeuanganData] = useState([]);
 
   const [formData, setFormData] = useState({});
@@ -245,32 +67,23 @@ export default function NinaProjectApp() {
         return;
       }
       const parts = hash.split("/");
-      const tab = parts[0] || "home";
-      const modal = parts[1] || null;
-
-      setActiveTab(tab);
-      setModalType(modal);
+      setActiveTab(parts[0] || "home");
+      setModalType(parts[1] || null);
     };
 
     window.addEventListener("hashchange", handleHashChange);
-    if (!window.location.hash) {
-      window.location.replace("#home");
-    } else {
-      handleHashChange();
-    }
+    if (!window.location.hash) window.location.replace("#home");
+    else handleHashChange();
+
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  const navToTab = (tab) => {
-    window.location.hash = tab;
-  };
+  const navToTab = (tab) => (window.location.hash = tab);
 
-  // PERUBAHAN: Logika Pemanggilan Modal
   const openModal = (type, data = null, existData = null) => {
     const today = new Date().toISOString().split("T")[0];
 
     if (type === "bayar_baru") {
-      // BIKIN TRANSAKSI BARU: Form dikosongkan
       setActiveSiswa(data);
       setFormData({
         tanggal: today,
@@ -284,14 +97,13 @@ export default function NinaProjectApp() {
       window.location.hash = `${activeTab}/keuangan`;
       return;
     } else if (type === "edit_keuangan") {
-      // EDIT TRANSAKSI LAMA (Dari Tab Keuangan)
-      setActiveSiswa(data); // data = siswa obj
-      setFormData({ ...existData }); // existData = transaksi obj
+      setActiveSiswa(data);
+      setFormData({ ...existData });
       window.location.hash = `${activeTab}/keuangan`;
       return;
     } else if (type === "kwitansi") {
       setActiveSiswa(data);
-      setFormData({ ...existData }); // Simpan transaksi aktif ke formData untuk dicetak
+      setFormData({ ...existData });
       window.location.hash = `${activeTab}/kwitansi`;
       return;
     } else if (type === "siswa") {
@@ -308,13 +120,10 @@ export default function NinaProjectApp() {
       setActiveSiswa(data);
       setFormData({ ...existData, tanggal: existData?.tanggal || today });
     }
-
     window.location.hash = `${activeTab}/${type}`;
   };
 
-  const closeModal = () => {
-    window.location.replace(`#${activeTab}`);
-  };
+  const closeModal = () => window.location.replace(`#${activeTab}`);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -334,7 +143,6 @@ export default function NinaProjectApp() {
         setNilaiData(nData);
       }
 
-      // PERUBAHAN: Ambil semua riwayat keuangan sebagai Array, urutkan dari yang terbaru
       const { data: dKeuangan } = await supabase
         .from("keuangan")
         .select("*")
@@ -352,9 +160,8 @@ export default function NinaProjectApp() {
   }, []);
 
   const handleLogout = async () => {
-    if (window.confirm("Apakah Anda yakin ingin keluar dari aplikasi?")) {
+    if (window.confirm("Apakah Anda yakin ingin keluar dari aplikasi?"))
       await supabase.auth.signOut();
-    }
   };
 
   const handleInlineSiswa = async (id, key, val) => {
@@ -375,7 +182,6 @@ export default function NinaProjectApp() {
     await supabase.from("nilai").upsert({ siswa_id: siswaId, ...newData });
   };
 
-  // PERUBAHAN: Inline Edit Keuangan berdasarkan ID Transaksi, BUKAN ID Siswa
   const handleInlineKeuangan = async (transaksiId, key, val) => {
     setKeuanganData((prev) =>
       prev.map((k) => (k.id === transaksiId ? { ...k, [key]: val } : k)),
@@ -406,14 +212,14 @@ export default function NinaProjectApp() {
           const newData = [...siswaData];
           newData[existIndex] = formData;
           setSiswaData(newData);
-        } else {
-          setSiswaData([...siswaData, formData]);
-        }
-        await supabase.from("siswa").upsert({
-          id: formData.id,
-          nama: formData.nama,
-          kelas: formData.kelas,
-        });
+        } else setSiswaData([...siswaData, formData]);
+        await supabase
+          .from("siswa")
+          .upsert({
+            id: formData.id,
+            nama: formData.nama,
+            kelas: formData.kelas,
+          });
       } else if (modalType === "nilai") {
         setNilaiData({ ...nilaiData, [activeSiswa.id]: formData });
         await supabase.from("nilai").upsert({
@@ -426,9 +232,7 @@ export default function NinaProjectApp() {
           keterangan: formData.keterangan || null,
         });
       } else if (modalType === "keuangan") {
-        // PERUBAHAN: Logika Simpan / Edit Transaksi Keuangan
         if (formData.id) {
-          // JIKA ADA ID TRANSAKSI = MODE EDIT
           await supabase
             .from("keuangan")
             .update({
@@ -441,14 +245,12 @@ export default function NinaProjectApp() {
               status: formData.status,
             })
             .eq("id", formData.id);
-
           setKeuanganData((prev) =>
             prev.map((item) =>
               item.id === formData.id ? { ...item, ...formData } : item,
             ),
           );
         } else {
-          // JIKA TIDAK ADA ID = MODE BAYAR BARU (INSERT)
           const payload = {
             siswa_id: activeSiswa.id,
             tanggal: formData.tanggal || today,
@@ -459,17 +261,13 @@ export default function NinaProjectApp() {
             metode: formData.metode || "Cash",
             status: formData.status || "Sudah",
           };
-
           const { data: newRow, error } = await supabase
             .from("keuangan")
             .insert(payload)
             .select()
             .single();
-          if (!error && newRow) {
-            setKeuanganData((prev) => [newRow, ...prev]);
-          } else {
-            fetchData(); // Fallback ambil ulang data jika select error
-          }
+          if (!error && newRow) setKeuanganData((prev) => [newRow, ...prev]);
+          else fetchData();
         }
       }
     } catch (error) {
@@ -490,7 +288,6 @@ export default function NinaProjectApp() {
     }
   };
 
-  // PERUBAHAN: Fungsi Hapus Riwayat Keuangan
   const handleDeleteKeuangan = async (id_transaksi) => {
     if (
       window.confirm(
@@ -503,17 +300,8 @@ export default function NinaProjectApp() {
   };
 
   const getNomorKwitansi = (transaksiId) => {
-    // Jika belum ada ID (misal sistem sedang loading)
     if (!transaksiId) return "000";
-
-    // Jika ID dari Supabase Anda adalah angka urut (1, 2, 3...)
-    // Kita tambahkan angka 0 di depannya agar jadi 001, 002, 015, dst.
-    if (!isNaN(transaksiId)) {
-      return String(transaksiId).padStart(3, "0");
-    }
-
-    // Jika ID dari Supabase Anda berupa huruf & angka acak (UUID)
-    // Kita ambil 5 karakter terakhirnya saja agar unik tapi tetap rapi
+    if (!isNaN(transaksiId)) return String(transaksiId).padStart(3, "0");
     const strId = String(transaksiId).toUpperCase();
     return strId.slice(-5);
   };
@@ -535,17 +323,17 @@ export default function NinaProjectApp() {
       link.click();
     } catch (err) {
       console.error("Gagal memproses gambar:", err);
-      alert("Gagal memproses gambar.");
     } finally {
       setIsCapturing(false);
     }
   };
 
-  // Filter untuk Tab Siswa & Nilai
+  // FILTER & SORT
   const filteredSiswa = useMemo(() => {
     let result = siswaData.filter((s) => {
-      const namaAman = String(s.nama || "").toLowerCase();
-      const matchSearch = namaAman.includes(search.toLowerCase());
+      const matchSearch = String(s.nama || "")
+        .toLowerCase()
+        .includes(search.toLowerCase());
       const matchKelas = filterKelas ? s.kelas === filterKelas : true;
       return matchSearch && matchKelas;
     });
@@ -556,31 +344,27 @@ export default function NinaProjectApp() {
     return result;
   }, [siswaData, search, filterKelas, sortOrder]);
 
-  // PERUBAHAN: Filter KHUSUS untuk Tab Keuangan (Mapping berdasarkan Array Transaksi)
   const filteredKeuangan = useMemo(() => {
     let result = keuanganData.filter((k) => {
       const s = siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
-      const namaAman = String(s.nama || "").toLowerCase();
-      const matchSearch = namaAman.includes(search.toLowerCase());
+      const matchSearch = String(s.nama || "")
+        .toLowerCase()
+        .includes(search.toLowerCase());
       const matchKelas = filterKelas ? s.kelas === filterKelas : true;
       const matchBulan = filterBulan
         ? k.tanggal?.substring(5, 7) === filterBulan
         : true;
       return matchSearch && matchKelas && matchBulan;
     });
-
-    // Sort berdasarkan nama siswa di dalam transaksi
     result.sort((a, b) => {
       const sA = siswaData.find((s) => s.id === a.siswa_id)?.nama || "";
       const sB = siswaData.find((s) => s.id === b.siswa_id)?.nama || "";
       if (sortOrder === "asc") return sA.localeCompare(sB);
       return sB.localeCompare(sA);
     });
-
     return result;
   }, [keuanganData, siswaData, search, filterKelas, filterBulan, sortOrder]);
 
-  // Kalkulasi Total dari seluruh transaksi keuanganData
   const { grandTotalKeuangan, totalCash, totalTransfer } = useMemo(() => {
     let total = 0,
       cash = 0,
@@ -598,6 +382,7 @@ export default function NinaProjectApp() {
     return { grandTotalKeuangan: total, totalCash: cash, totalTransfer: tf };
   }, [keuanganData]);
 
+  // EXPORT
   const handleExportNilai = () => {
     const rows = [
       [
@@ -701,34 +486,15 @@ export default function NinaProjectApp() {
 
   return (
     <>
-      {splashState !== "hidden" && (
-        <div
-          className={`fixed inset-0 z-[999] bg-[#f8fafc] flex flex-col items-center justify-center transition-all duration-700 ease-in-out ${splashState === "exiting" ? "opacity-0 scale-105 pointer-events-none" : "opacity-100 scale-100"}`}
-        >
-          <img
-            src="/logo.svg"
-            alt="Logo Nina"
-            className="w-24 h-24 md:w-32 md:h-32 object-contain mb-8 drop-shadow-xl animate-[pulse_3s_ease-in-out_infinite]"
-          />
-          <h1 className="font-bismillah text-4xl md:text-5xl text-[#000080] tracking-widest drop-shadow-sm">
-            Nina Rahell Project
-          </h1>
-          <div className="w-10 h-1 bg-teal-500 rounded-full mt-4 mb-3 opacity-70"></div>
-          <p className="text-slate-500 text-[10px] md:text-xs uppercase tracking-[0.3em] font-semibold">
-            Manajemen Akademik
-          </p>
-        </div>
-      )}
+      <SplashScreen splashState={splashState} />
 
       <div className="min-h-screen text-slate-800 pb-16 md:pb-0 relative selection-live-bg overflow-x-hidden z-0 font-sans selection:bg-teal-200 selection:text-teal-900">
         <style
           dangerouslySetInnerHTML={{
             __html: `
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-          
           @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
           .selection-live-bg { background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #fffbeb, #f0fdfa); background-size: 400% 400%; animation: gradientBG 15s ease infinite; }
-
           @media print {
             body, html, .selection-live-bg, main, #root, .__next { background: white !important; background-image: none !important; background-color: white !important; margin: 0 !important; padding: 0 !important; }
             nav, .no-print, button, .fixed:not(:has(#kwitansi-print-area)), .animate-blob1, .animate-blob2, .absolute.inset-0.overflow-hidden { display: none !important; }
@@ -758,104 +524,12 @@ export default function NinaProjectApp() {
           />
         </div>
 
-        <nav className="bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-sm sticky top-0 z-40 no-print">
-          <div className="max-w-7xl mx-auto px-4 md:px-6">
-            <div className="flex justify-between items-center h-14 md:h-16">
-              <div
-                className="flex items-center gap-2 cursor-pointer group"
-                onClick={() => navToTab("home")}
-              >
-                <img
-                  src="/logo.svg"
-                  alt="Logo Nina"
-                  className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-sm group-hover:scale-105 transition-transform"
-                />
-                <span className="font-bismillah text-xl md:text-3xl text-[#000080] drop-shadow-sm pt-1.5">
-                  Nina Rahell Project
-                </span>
-              </div>
-              <div className="hidden md:flex items-center space-x-3">
-                <div className="flex space-x-2 bg-slate-50/50 p-1.5 rounded-xl border border-white/60">
-                  {["home", "siswa", "nilai", "keuangan"].map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => navToTab(tab)}
-                      className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all duration-300 text-[11px] md:text-xs font-semibold capitalize tracking-wide ${activeTab === tab ? "bg-white text-teal-700 shadow-[0_4px_15px_rgba(20,184,166,0.15)]" : "text-slate-500 hover:bg-white/60 hover:text-slate-700"}`}
-                    >
-                      {tab === "home" && <Home size={14} />}
-                      {tab === "siswa" && <Users size={14} />}
-                      {tab === "nilai" && <GraduationCap size={14} />}
-                      {tab === "keuangan" && <Wallet size={14} />}
-                      {tab === "home"
-                        ? "Beranda"
-                        : tab === "siswa"
-                          ? "Data Siswa"
-                          : tab === "nilai"
-                            ? "Rekap Nilai"
-                            : "Keuangan"}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm border border-rose-100 flex items-center gap-1.5"
-                >
-                  <LogOut size={14} /> Keluar
-                </button>
-              </div>
-              <div className="md:hidden flex items-center gap-2">
-                <button
-                  onClick={handleLogout}
-                  className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors shadow-sm border border-rose-100 flex items-center gap-1"
-                >
-                  <LogOut size={12} /> Keluar
-                </button>
-              </div>
-            </div>
-          </div>
-        </nav>
-
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-white/60 flex justify-around items-center pt-1.5 pb-1.5 z-40 px-2 no-print shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-          {["home", "siswa", "nilai", "keuangan"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => navToTab(tab)}
-              className={`flex flex-col items-center p-1.5 rounded-xl min-w-[64px] transition-all duration-300 ${activeTab === tab ? "text-teal-700 scale-105" : "text-slate-400 hover:text-slate-600"}`}
-            >
-              <div
-                className={`transition-all duration-300 ${activeTab === tab ? "bg-teal-50 p-1.5 rounded-lg mb-0.5 shadow-sm" : "mb-1"}`}
-              >
-                {tab === "home" && (
-                  <Home
-                    size={20}
-                    className={activeTab === "home" ? "fill-teal-100" : ""}
-                  />
-                )}
-                {tab === "siswa" && (
-                  <Users
-                    size={20}
-                    className={activeTab === "siswa" ? "fill-teal-100" : ""}
-                  />
-                )}
-                {tab === "nilai" && (
-                  <GraduationCap
-                    size={20}
-                    className={activeTab === "nilai" ? "fill-teal-100" : ""}
-                  />
-                )}
-                {tab === "keuangan" && (
-                  <Wallet
-                    size={20}
-                    className={activeTab === "keuangan" ? "fill-teal-100" : ""}
-                  />
-                )}
-              </div>
-              <span className="text-[9px] font-semibold capitalize tracking-wide">
-                {tab === "home" ? "Beranda" : tab}
-              </span>
-            </button>
-          ))}
-        </div>
+        <Navbar
+          activeTab={activeTab}
+          navToTab={navToTab}
+          handleLogout={handleLogout}
+        />
+        <BottomNav activeTab={activeTab} navToTab={navToTab} />
 
         <main className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
           <div className="hidden print-kop-laporan items-center justify-between mb-2 border-b-4 border-double border-slate-800 pb-2">
@@ -895,6 +569,7 @@ export default function NinaProjectApp() {
             </div>
           </div>
 
+          {/* ============================== VIEW: HOME ============================== */}
           {activeTab === "home" && (
             <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
               <div className="bg-gradient-to-br from-teal-500/95 to-emerald-700/95 backdrop-blur-xl rounded-3xl p-5 md:p-8 text-white shadow-[0_20px_40px_rgba(20,184,166,0.2)] border border-white/20 relative overflow-hidden">
@@ -1043,7 +718,6 @@ export default function NinaProjectApp() {
                               {s.kelas}
                             </p>
                           </div>
-                          {/* PERUBAHAN: Tombol Bayar di Beranda selalu buat transaksi BARU */}
                           <button
                             onClick={() => openModal("bayar_baru", s)}
                             className="px-3 py-1.5 md:px-4 md:py-2 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-lg md:rounded-xl text-[9px] md:text-[11px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
@@ -1058,6 +732,7 @@ export default function NinaProjectApp() {
             </div>
           )}
 
+          {/* ============================== VIEW: HEADER FILTER ============================== */}
           {activeTab !== "home" && (
             <div className="no-print bg-white/80 backdrop-blur-xl rounded-2xl md:rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 p-3 md:p-5 mb-4 md:mb-6 animate-in fade-in slide-in-from-top-4 duration-300">
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-4">
@@ -1071,7 +746,6 @@ export default function NinaProjectApp() {
                     <h2 className="text-sm md:text-xl font-black text-slate-800 capitalize tracking-tight">
                       Manajemen {activeTab}
                     </h2>
-                    {/* Menggunakan panjang filteredSiswa untuk Siswa/Nilai, panjang filteredKeuangan untuk Tab Keuangan */}
                     <p className="text-[9px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest mt-0.5">
                       Total{" "}
                       {activeTab === "keuangan"
@@ -1096,7 +770,6 @@ export default function NinaProjectApp() {
                       onChange={(e) => setSearch(e.target.value)}
                     />
                   </div>
-
                   <select
                     className="py-1.5 md:py-2 px-2 md:px-3 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-semibold border border-slate-200 outline-none text-slate-700 shadow-sm"
                     value={sortOrder}
@@ -1105,7 +778,6 @@ export default function NinaProjectApp() {
                     <option value="asc">A - Z</option>
                     <option value="desc">Z - A</option>
                   </select>
-
                   <select
                     className="py-1.5 md:py-2 px-2 md:px-3 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-semibold border border-slate-200 outline-none text-slate-700 shadow-sm"
                     value={filterKelas}
@@ -1194,14 +866,14 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* ======================= TAB SISWA ======================= */}
+          {/* ============================== VIEW: TAB SISWA ============================== */}
           {activeTab === "siswa" && (
             <div className="bg-white/90">
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[600px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                         No
                       </th>
                       <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-5 py-2 md:py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
@@ -1244,7 +916,6 @@ export default function NinaProjectApp() {
                         </td>
                         <td className="px-2 md:px-5 py-2 md:py-3 text-center no-print whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1 md:gap-1.5">
-                            {/* PERUBAHAN: Tombol Bayar Baru */}
                             <button
                               onClick={() => openModal("bayar_baru", s)}
                               className="px-2 py-1 md:px-3 md:py-1.5 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
@@ -1310,7 +981,6 @@ export default function NinaProjectApp() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-1">
-                      {/* PERUBAHAN: Tombol Bayar Baru */}
                       <button
                         onClick={() => openModal("bayar_baru", s)}
                         className="px-4 py-2 bg-teal-50 text-teal-700 font-bold rounded-lg text-[10px] tracking-widest uppercase border border-teal-100 flex-1 mr-2 flex justify-center"
@@ -1338,14 +1008,14 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* ======================= TAB NILAI ======================= */}
+          {/* ============================== VIEW: TAB NILAI ============================== */}
           {activeTab === "nilai" && (
             <div className="bg-white/90">
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[850px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                         No
                       </th>
                       <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
@@ -1577,14 +1247,14 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* ======================= TAB KEUANGAN (RIWAYAT TRANSAKSI) ======================= */}
+          {/* ============================== VIEW: TAB KEUANGAN ============================== */}
           {activeTab === "keuangan" && (
             <div className="bg-white/90">
               <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[1000px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                         No
                       </th>
                       <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
@@ -1620,7 +1290,6 @@ export default function NinaProjectApp() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {/* PERUBAHAN: Loop berdasarkan Riwayat Transaksi (filteredKeuangan), bukan filteredSiswa */}
                     {filteredKeuangan.map((k, idx) => {
                       const s =
                         siswaData.find((siswa) => siswa.id === k.siswa_id) ||
@@ -1644,7 +1313,6 @@ export default function NinaProjectApp() {
                               {s.kelas || "-"}
                             </span>
                           </td>
-                          {/* PERUBAHAN: handleInlineKeuangan menggunakan k.id (ID Transaksi) */}
                           <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap">
                             <EditableCell
                               alignCenter={true}
@@ -1933,514 +1601,25 @@ export default function NinaProjectApp() {
           )}
         </main>
 
-        {modalType && modalType !== "kwitansi" && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 no-print animate-in fade-in duration-200">
-            <div className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-2xl shadow-2xl w-full max-w-sm p-5 md:p-6 animate-in zoom-in-95 duration-200">
-              <div className="flex justify-between items-center mb-5">
-                <h3 className="text-base md:text-lg font-black text-slate-800 capitalize flex items-center gap-2.5">
-                  <div className="p-1.5 md:p-2 bg-teal-50 text-teal-600 rounded-lg md:rounded-xl">
-                    <Edit size={16} className="md:w-5 md:h-5" />
-                  </div>
-                  Form {modalType}
-                </h3>
-                <button
-                  onClick={closeModal}
-                  className="p-1.5 md:p-2 bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 rounded-full transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <form onSubmit={handleSaveData} className="space-y-3.5">
-                {modalType === "siswa" && (
-                  <>
-                    <div>
-                      <label className="block text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 pl-1">
-                        Nama Lengkap
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        placeholder="Masukkan nama..."
-                        className="w-full p-2.5 md:p-3 bg-slate-50/80 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl text-xs md:text-sm font-semibold outline-none transition-all shadow-sm"
-                        value={formData.nama || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, nama: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 pl-1">
-                        Kategori Kelas
-                      </label>
-                      <select
-                        required
-                        className="w-full p-2.5 md:p-3 bg-slate-50/80 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl text-xs md:text-sm font-semibold outline-none transition-all shadow-sm"
-                        value={formData.kelas || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, kelas: e.target.value })
-                        }
-                      >
-                        {kelasOptions.map((k) => (
-                          <option key={k} value={k}>
-                            {k}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
-                )}
+        {/* ============================== MODALS ============================== */}
+        <FormModal
+          modalType={modalType}
+          formData={formData}
+          setFormData={setFormData}
+          handleSaveData={handleSaveData}
+          closeModal={closeModal}
+          kelasOptions={kelasOptions}
+        />
 
-                {modalType === "kelas" && (
-                  <div>
-                    <label className="block text-[10px] md:text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 pl-1">
-                      Nama Tingkat/Kelas
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      placeholder="Misal: Kelas 1..."
-                      className="w-full p-2.5 md:p-3 bg-slate-50/80 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl text-xs md:text-sm font-semibold outline-none transition-all shadow-sm"
-                      value={formData.nama_kelas || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, nama_kelas: e.target.value })
-                      }
-                    />
-                  </div>
-                )}
-
-                {modalType === "keuangan" && (
-                  <div>
-                    <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                      Tanggal Input / Bayar
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-teal-500"
-                      value={formData.tanggal || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, tanggal: e.target.value })
-                      }
-                    />
-                  </div>
-                )}
-
-                {modalType === "nilai" && (
-                  <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <div>
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Hafalan
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
-                        value={formData.hafalan || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, hafalan: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Catatan
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
-                        value={formData.catatan || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, catatan: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Ulangan
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
-                        value={formData.ulangan || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, ulangan: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Ujian
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
-                        value={formData.ujian || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, ujian: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Keterangan Opsional
-                      </label>
-                      <textarea
-                        rows="2"
-                        placeholder="Catatan guru..."
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-blue-500"
-                        value={formData.keterangan || ""}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            keterangan: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {modalType === "keuangan" && (
-                  <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <div>
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Infaq
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-amber-500"
-                        value={formData.infaq || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, infaq: e.target.value })
-                        }
-                        onBlur={(e) =>
-                          setFormData({
-                            ...formData,
-                            infaq: autoRibuan(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Daftar Ulang
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-amber-500"
-                        value={formData.cicilan || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, cicilan: e.target.value })
-                        }
-                        onBlur={(e) =>
-                          setFormData({
-                            ...formData,
-                            cicilan: autoRibuan(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Konsumsi
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-amber-500"
-                        value={formData.konsumsi || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, konsumsi: e.target.value })
-                        }
-                        onBlur={(e) =>
-                          setFormData({
-                            ...formData,
-                            konsumsi: autoRibuan(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                        Makan Siang
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full p-2.5 md:p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-semibold outline-none focus:border-amber-500"
-                        value={formData.makan || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, makan: e.target.value })
-                        }
-                        onBlur={(e) =>
-                          setFormData({
-                            ...formData,
-                            makan: autoRibuan(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div className="col-span-2 grid grid-cols-2 gap-3 md:gap-4 mt-1 p-2 md:p-3 bg-amber-50/50 border border-amber-100 rounded-xl">
-                      <div>
-                        <label className="block text-[9px] md:text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1.5">
-                          Metode
-                        </label>
-                        <select
-                          className="w-full p-2 md:p-2.5 bg-white border border-amber-200 rounded-lg text-[10px] md:text-xs font-bold outline-none text-slate-700"
-                          value={formData.metode || "Cash"}
-                          onChange={(e) =>
-                            setFormData({ ...formData, metode: e.target.value })
-                          }
-                        >
-                          <option value="Cash">Tunai (Cash)</option>
-                          <option value="Transfer">Transfer Bank</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[9px] md:text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1.5">
-                          Status Lunas
-                        </label>
-                        <select
-                          className="w-full p-2 md:p-2.5 bg-white border border-amber-200 rounded-lg text-[10px] md:text-xs font-bold outline-none text-slate-700"
-                          value={formData.status || "Belum"}
-                          onChange={(e) =>
-                            setFormData({ ...formData, status: e.target.value })
-                          }
-                        >
-                          <option value="Belum">Belum Bayar</option>
-                          <option value="Sudah">Sudah Lunas</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full py-3 md:py-4 mt-4 md:mt-6 rounded-xl text-white bg-gradient-to-r from-teal-500 to-emerald-600 shadow-[0_10px_20px_rgba(20,184,166,0.3)] hover:shadow-[0_15px_30px_rgba(20,184,166,0.4)] hover:-translate-y-1 flex justify-center items-center gap-2 font-black text-[10px] md:text-xs uppercase tracking-widest transition-all duration-300"
-                >
-                  <Save size={16} /> Simpan Data
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* PERUBAHAN PADA KWITANSI: Menggunakan formData sebagai sumber data transaksi */}
         {modalType === "kwitansi" && activeSiswa && formData && (
-          <div
-            id="modal-container-kwitansi"
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-300 print:p-0 print:bg-white print:static print:block"
-          >
-            <div className="absolute top-4 right-4 flex flex-wrap gap-2 no-print z-50 justify-end">
-              <button
-                onClick={handleDownloadImage}
-                disabled={isCapturing}
-                className="px-3 py-2 md:px-4 md:py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-bold tracking-widest uppercase rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] shadow-[0_8px_20px_rgba(59,130,246,0.3)] disabled:opacity-70 transition-all hover:-translate-y-0.5"
-              >
-                <Camera size={14} className="md:w-4 md:h-4" />{" "}
-                {isCapturing ? "Proses..." : "Simpan Gambar"}
-              </button>
-              <button
-                onClick={() => window.print()}
-                className="px-3 py-2 md:px-4 md:py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold tracking-widest uppercase rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] shadow-[0_8px_20px_rgba(20,184,166,0.3)] transition-all hover:-translate-y-0.5"
-              >
-                <Printer size={14} className="md:w-4 md:h-4" /> Cetak & PDF
-              </button>
-              <button
-                onClick={closeModal}
-                className="p-1.5 md:p-2 bg-white/10 text-white hover:bg-rose-500 border border-white/20 rounded-lg md:rounded-xl shadow-lg transition-all"
-              >
-                <X size={18} className="md:w-5 md:h-5" />
-              </button>
-            </div>
-
-            <div
-              id="kwitansi-print-area"
-              className="w-full max-w-sm md:max-w-md print:max-w-full print:w-full bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] print:shadow-none p-5 md:p-6 print:p-8 relative print-mode mt-16 md:mt-0 print:mt-0 mx-auto"
-            >
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-                <span
-                  className={`text-[4rem] md:text-[6rem] font-black uppercase tracking-widest -rotate-[35deg] opacity-[0.04] select-none ${formData.status === "Sudah" ? "text-teal-900" : "text-amber-900"}`}
-                >
-                  {formData.status === "Sudah" ? "LUNAS" : "BELUM"}
-                </span>
-              </div>
-
-              <div className="relative z-10">
-                <div className="flex justify-between items-center border-b-2 border-slate-800 pb-3 mb-4 bg-white/50">
-                  <div className="flex items-center gap-2.5 md:gap-3">
-                    <img
-                      src="/logo.svg"
-                      alt="Logo Nina"
-                      className="w-10 h-10 md:w-12 md:h-12 object-contain"
-                    />
-                    <div>
-                      <h1 className="text-sm md:text-lg text-[#000080] font-bismillah tracking-widest leading-tight">
-                        Nina Rahell Project
-                      </h1>
-                      <p className="text-[7px] md:text-[9px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-0.5">
-                        Manajemen Akademik
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <h2 className="text-sm md:text-xl text-slate-300 uppercase font-black tracking-widest leading-tight">
-                      Kwitansi
-                    </h2>
-                    <p className="text-[8px] md:text-[10px] font-bold text-slate-700 mt-1 uppercase tracking-widest bg-slate-100 inline-block px-1.5 py-0.5 rounded-sm">
-                      No: {getNomorKwitansi(formData.id)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4 text-[9px] md:text-[11px]">
-                  <table className="w-full text-left text-slate-800">
-                    <tbody>
-                      <tr>
-                        <td className="font-bold py-1 w-20 text-slate-500 uppercase tracking-widest whitespace-nowrap">
-                          Nama
-                        </td>
-                        <td className="py-1 w-2 font-black text-slate-400">
-                          :
-                        </td>
-                        <td className="py-1 font-bold text-[10px] md:text-[12px] text-slate-800">
-                          {activeSiswa.nama}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="font-bold py-1 text-slate-500 uppercase tracking-widest whitespace-nowrap">
-                          Kategori
-                        </td>
-                        <td className="py-1 w-2 font-black text-slate-400">
-                          :
-                        </td>
-                        <td className="py-1 font-bold text-slate-800">
-                          {activeSiswa.kelas}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="font-bold py-1 text-slate-500 uppercase tracking-widest whitespace-nowrap">
-                          Tanggal
-                        </td>
-                        <td className="py-1 w-2 font-black text-slate-400">
-                          :
-                        </td>
-                        <td className="py-1 font-bold text-slate-800">
-                          {formData.tanggal
-                            ? new Date(formData.tanggal).toLocaleDateString(
-                                "id-ID",
-                                {
-                                  day: "numeric",
-                                  month: "long",
-                                  year: "numeric",
-                                },
-                              )
-                            : "-"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="font-bold py-1 text-slate-500 uppercase tracking-widest whitespace-nowrap">
-                          Metode
-                        </td>
-                        <td className="py-1 w-2 font-black text-slate-400">
-                          :
-                        </td>
-                        <td className="py-1 font-bold flex items-center gap-1.5 text-slate-800">
-                          {formData.metode || "Cash"}
-                          <span
-                            className={`px-1.5 py-0.5 rounded-sm text-[7px] md:text-[8px] uppercase tracking-widest ${formData.status === "Sudah" ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"}`}
-                          >
-                            {formData.status === "Sudah"
-                              ? "Lunas"
-                              : "Belum Selesai"}
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                <table className="w-full border-2 border-slate-300 text-[9px] md:text-[10px] mb-6 bg-white overflow-hidden rounded-md">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="p-1.5 md:p-2 border-r border-b border-slate-300 text-slate-700 font-black uppercase tracking-widest whitespace-nowrap">
-                        Rincian Pembayaran
-                      </th>
-                      <th className="p-1.5 md:p-2 border-b border-slate-300 text-right text-slate-700 w-24 md:w-32 font-black uppercase tracking-widest whitespace-nowrap">
-                        Nominal
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-300">
-                    <tr>
-                      <td className="p-1.5 md:p-2 border-r border-slate-300 font-semibold text-slate-600">
-                        Infaq Pendidikan
-                      </td>
-                      <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
-                        {formatRp(formData.infaq)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-1.5 md:p-2 border-r border-slate-300 font-semibold text-slate-600">
-                        Cicilan Daftar Ulang
-                      </td>
-                      <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
-                        {formatRp(formData.cicilan)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-1.5 md:p-2 border-r border-slate-300 font-semibold text-slate-600">
-                        Biaya Konsumsi
-                      </td>
-                      <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
-                        {formatRp(formData.konsumsi)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="p-1.5 md:p-2 border-r border-slate-300 font-semibold text-slate-600">
-                        Makan Siang
-                      </td>
-                      <td className="p-1.5 md:p-2 text-right font-black text-slate-800">
-                        {formatRp(formData.makan)}
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot className="bg-slate-800 text-white">
-                    <tr>
-                      <td className="p-2 md:p-2.5 border-r border-slate-700 text-right uppercase tracking-widest text-[8px] md:text-[9px] font-black whitespace-nowrap">
-                        Total Pembayaran
-                      </td>
-                      <td className="p-2 md:p-2.5 text-right text-[11px] md:text-[13px] font-black text-teal-300 whitespace-nowrap">
-                        {formatRp(
-                          (Number(formData.infaq) || 0) +
-                            (Number(formData.cicilan) || 0) +
-                            (Number(formData.konsumsi) || 0) +
-                            (Number(formData.makan) || 0),
-                        )}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-
-                <div className="flex justify-end pr-2 md:pr-4 text-center">
-                  <div className="flex flex-col items-center">
-                    <p className="mb-0 text-[8px] md:text-[9px] uppercase text-slate-500 font-black tracking-[0.2em]">
-                      Penerima
-                    </p>
-                    <div className="w-24 h-12 md:w-32 md:h-16 flex items-center justify-center overflow-hidden my-0.5">
-                      <img
-                        src="/assets/ttd.svg"
-                        alt="Tanda Tangan"
-                        className="w-full h-full object-cover scale-90 mix-blend-multiply"
-                      />
-                    </div>
-                    <p className="border-b-[1.5px] border-slate-800 pb-0.5 text-slate-800 font-black text-[9px] md:text-[11px] tracking-wide whitespace-nowrap">
-                      Nina Rahilah S.Pd.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <KwitansiPrint
+            activeSiswa={activeSiswa}
+            formData={formData}
+            getNomorKwitansi={getNomorKwitansi}
+            handleDownloadImage={handleDownloadImage}
+            isCapturing={isCapturing}
+            closeModal={closeModal}
+          />
         )}
       </div>
     </>
