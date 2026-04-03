@@ -186,7 +186,7 @@ export default function NinaProjectApp() {
 
     const intervalId = setInterval(() => {
       fetchData(true); // Polling background setiap 5 detik
-    }, 5000);
+    }, 15000);
 
     return () => clearInterval(intervalId); // Bersihkan interval saat keluar komponen
   }, []);
@@ -245,13 +245,11 @@ export default function NinaProjectApp() {
           newData[existIndex] = formData;
           setSiswaData(newData);
         } else setSiswaData([...siswaData, formData]);
-        await supabase
-          .from("siswa")
-          .upsert({
-            id: formData.id,
-            nama: formData.nama,
-            kelas: formData.kelas,
-          });
+        await supabase.from("siswa").upsert({
+          id: formData.id,
+          nama: formData.nama,
+          kelas: formData.kelas,
+        });
       } else if (modalType === "nilai") {
         setNilaiData({ ...nilaiData, [activeSiswa.id]: formData });
         await supabase.from("nilai").upsert({
