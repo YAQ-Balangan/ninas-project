@@ -5,11 +5,32 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nina's Project</title>
+  <title>Nina Rahell Project</title>
+
+  <style>
+    @font-face {
+      font-family: 'Bismillah Script';
+      src: url('/fonts/BismillahScript.ttf') format('truetype');
+      font-weight: normal; 
+      font-style: normal;
+    }
+
+    /* Style untuk teks loading */
+    .loading-teks {
+      font-family: 'Bismillah Script', cursive;
+      color: #000080;
+      font-size: 2rem;
+      text-align: center;
+      margin-top: 20vh;
+    }
+  </style>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div class="loading-teks">Memuat Nina Rahell Project...</div>
+  </div>
+  
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
