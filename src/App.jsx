@@ -75,7 +75,7 @@ const EditableCell = ({
   onSave,
   placeholder = "Kosong...",
   isCurrency = false,
-  alignCenter = false, // <-- Tambahan khusus agar text bisa rata tengah
+  alignCenter = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [val, setVal] = useState(value ?? "");
@@ -176,7 +176,7 @@ export default function NinaProjectApp() {
   const [search, setSearch] = useState("");
   const [filterKelas, setFilterKelas] = useState("");
   const [filterBulan, setFilterBulan] = useState("");
-  const [sortOrder, setSortOrder] = useState("asc"); // asc atau desc
+  const [sortOrder, setSortOrder] = useState("asc");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -640,7 +640,9 @@ export default function NinaProjectApp() {
       }
       .print-kop-laporan { display: flex !important; border-bottom: 2px solid #000 !important; margin-bottom: 15px !important; padding-bottom: 10px !important; }
       main table { min-width: 100% !important; width: 100% !important; border: 1px solid #000 !important; border-collapse: collapse !important; }
-      main th, main td { border: 1px solid #000 !important; padding: 6px 4px !important; color: black !important; background-color: transparent !important; }
+      
+      /* Agar tabel print tidak hancur gara-gara sticky */
+      main th, main td { border: 1px solid #000 !important; padding: 6px 4px !important; color: black !important; background-color: transparent !important; position: static !important; box-shadow: none !important; }
 
       body:has(#kwitansi-print-area) main { display: none !important; }
       #kwitansi-print-area { display: block !important; position: relative !important; max-width: 550px !important; margin: 0 auto !important; background: white !important; }
@@ -776,7 +778,7 @@ export default function NinaProjectApp() {
                 {activeTab === "siswa"
                   ? "Data Siswa"
                   : activeTab === "nilai"
-                    ? "Rekap Nilai Akademik"
+                    ? "Rekap Nilai"
                     : "Keuangan Siswa"}
               </h2>
               {filterBulan && activeTab === "keuangan" && (
@@ -1014,7 +1016,6 @@ export default function NinaProjectApp() {
                     ))}
                   </select>
 
-                  {/* FILTER BULAN (Hanya untuk Keuangan, sudah dihapus dari Nilai) */}
                   {activeTab === "keuangan" && (
                     <select
                       className="py-1.5 md:py-2 px-2 md:px-3 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-semibold border border-slate-200 outline-none text-slate-700 shadow-sm"
@@ -1094,18 +1095,18 @@ export default function NinaProjectApp() {
             <div className="bg-white/90">
               <div className="w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[600px] text-left">
-                  <thead className="bg-slate-50/80 border-b border-slate-200">
+                  <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 w-8 md:w-12 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest">
                         No
                       </th>
-                      <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-5 py-2 md:py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest">
                         Nama Lengkap
                       </th>
-                      <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest w-24 md:w-48">
+                      <th className="px-2 md:px-5 py-2 md:py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest w-24 md:w-48">
                         Kelas
                       </th>
-                      <th className="px-2 py-2 md:px-5 md:py-4 text-slate-500 text-center w-16 md:w-32 text-[10px] md:text-xs font-bold uppercase tracking-widest no-print">
+                      <th className="px-2 md:px-5 py-2 md:py-4 text-slate-500 text-center w-32 md:w-48 text-[10px] md:text-xs font-bold uppercase tracking-widest no-print">
                         Aksi
                       </th>
                     </tr>
@@ -1114,12 +1115,12 @@ export default function NinaProjectApp() {
                     {filteredSiswa.map((s, idx) => (
                       <tr
                         key={s.id}
-                        className="hover:bg-teal-50/30 transition-colors"
+                        className="group hover:bg-teal-50/30 transition-colors"
                       >
-                        <td className="px-2 py-2 md:px-5 md:py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold">
+                        <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-2 md:py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold">
                           {idx + 1}
                         </td>
-                        <td className="px-2 py-2 md:px-5 md:py-3 text-slate-800 font-semibold">
+                        <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-5 py-2 md:py-3 text-slate-800 font-semibold text-left">
                           <EditableCell
                             value={s.nama}
                             onSave={(val) =>
@@ -1127,7 +1128,7 @@ export default function NinaProjectApp() {
                             }
                           />
                         </td>
-                        <td className="px-2 py-2 md:px-5 md:py-3">
+                        <td className="px-2 md:px-5 py-2 md:py-3">
                           <EditableCell
                             type="select"
                             options={kelasOptions}
@@ -1137,19 +1138,34 @@ export default function NinaProjectApp() {
                             }
                           />
                         </td>
-                        <td className="px-2 py-2 md:px-5 md:py-3 text-center no-print">
-                          <button
-                            onClick={() => openModal("siswa", s)}
-                            className="p-1 md:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md md:rounded-lg mx-0.5 md:mx-1 transition-colors"
-                          >
-                            <Edit size={12} className="md:w-3.5 md:h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSiswa(s.id)}
-                            className="p-1 md:p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md md:rounded-lg mx-0.5 md:mx-1 transition-colors"
-                          >
-                            <Trash2 size={12} className="md:w-3.5 md:h-3.5" />
-                          </button>
+                        <td className="px-2 md:px-5 py-2 md:py-3 text-center no-print">
+                          <div className="flex items-center justify-center gap-1 md:gap-1.5">
+                            {/* TOMBOL BAYAR BARU DITAMBAHKAN DI SINI */}
+                            <button
+                              onClick={() =>
+                                openModal(
+                                  "keuangan",
+                                  s,
+                                  keuanganData[s.id] || {},
+                                )
+                              }
+                              className="px-2 py-1 md:px-3 md:py-1.5 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
+                            >
+                              Bayar
+                            </button>
+                            <button
+                              onClick={() => openModal("siswa", s)}
+                              className="p-1.5 md:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md md:rounded-lg transition-colors"
+                            >
+                              <Edit size={12} className="md:w-3.5 md:h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSiswa(s.id)}
+                              className="p-1.5 md:p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md md:rounded-lg transition-colors"
+                            >
+                              <Trash2 size={12} className="md:w-3.5 md:h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1159,35 +1175,34 @@ export default function NinaProjectApp() {
             </div>
           )}
 
-          {/* TAB NILAI YANG SUDAH DIREVISI (TANPA TANGGAL & RATA TENGAH SEMUA) */}
           {activeTab === "nilai" && (
             <div className="bg-white/90">
               <div className="w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[850px] text-left">
-                  <thead className="bg-slate-50/80 border-b border-slate-200">
+                  <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest w-6 md:w-10">
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         No
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Siswa
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Hafalan
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Catatan
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Ulangan Harian
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Ujian
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Rata-Rata
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Ket.
                       </th>
                     </tr>
@@ -1204,18 +1219,18 @@ export default function NinaProjectApp() {
                       return (
                         <tr
                           key={s.id}
-                          className="hover:bg-teal-50/30 transition-colors"
+                          className="group hover:bg-teal-50/30 transition-colors"
                         >
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold">
+                          <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold">
                             {idx + 1}
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-slate-800 text-center text-[10px] md:text-xs font-bold leading-tight">
+                          <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight">
                             {s.nama} <br />
                             <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
                               {s.kelas}
                             </span>
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center">
                             <EditableCell
                               alignCenter={true}
                               type="number"
@@ -1226,7 +1241,7 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center">
                             <EditableCell
                               alignCenter={true}
                               type="number"
@@ -1237,7 +1252,7 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center">
                             <EditableCell
                               alignCenter={true}
                               type="number"
@@ -1248,7 +1263,7 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center">
                             <EditableCell
                               alignCenter={true}
                               type="number"
@@ -1259,10 +1274,10 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-teal-700 bg-teal-50/50 text-center text-[10px] md:text-xs font-bold">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-teal-700 bg-teal-50/50 text-center text-[10px] md:text-xs font-bold">
                             {rata > 0 ? rata.toFixed(1) : "-"}
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center">
                             <EditableCell
                               alignCenter={true}
                               value={n.keterangan}
@@ -1285,39 +1300,39 @@ export default function NinaProjectApp() {
             <div className="bg-white/90">
               <div className="w-full overflow-x-auto shadow-inner">
                 <table className="w-full min-w-[1000px] text-left">
-                  <thead className="bg-slate-50/80 border-b border-slate-200">
+                  <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest w-6 md:w-10">
+                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] min-w-[40px] md:min-w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         No
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Siswa
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Tgl Bayar
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Infaq
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Daftar Ulang
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Konsumsi
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight">
                         Makan Siang
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Total
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Metode
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest">
                         Status
                       </th>
-                      <th className="px-1 py-2 md:px-4 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest no-print">
+                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest no-print">
                         Aksi
                       </th>
                     </tr>
@@ -1333,18 +1348,18 @@ export default function NinaProjectApp() {
                       return (
                         <tr
                           key={s.id}
-                          className="hover:bg-teal-50/30 transition-colors"
+                          className="group hover:bg-teal-50/30 transition-colors"
                         >
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold">
+                          <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold">
                             {idx + 1}
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-slate-800 text-[10px] md:text-xs font-bold leading-tight">
+                          <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight">
                             {s.nama} <br />
                             <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
                               {s.kelas}
                             </span>
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center">
                             <EditableCell
                               alignCenter={true}
                               type="date"
@@ -1355,7 +1370,7 @@ export default function NinaProjectApp() {
                               placeholder="-"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right">
                             <EditableCell
                               type="number"
                               isCurrency
@@ -1366,7 +1381,7 @@ export default function NinaProjectApp() {
                               placeholder="0"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right">
                             <EditableCell
                               type="number"
                               isCurrency
@@ -1377,7 +1392,7 @@ export default function NinaProjectApp() {
                               placeholder="0"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right">
                             <EditableCell
                               type="number"
                               isCurrency
@@ -1388,7 +1403,7 @@ export default function NinaProjectApp() {
                               placeholder="0"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-right">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right">
                             <EditableCell
                               type="number"
                               isCurrency
@@ -1399,10 +1414,10 @@ export default function NinaProjectApp() {
                               placeholder="0"
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-teal-700 bg-teal-50/50 text-right text-[10px] md:text-xs font-bold whitespace-nowrap">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-teal-700 bg-teal-50/50 text-right text-[10px] md:text-xs font-bold whitespace-nowrap">
                             {formatRp(total)}
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center">
                             <EditableCell
                               type="select"
                               options={["Cash", "Transfer"]}
@@ -1412,7 +1427,7 @@ export default function NinaProjectApp() {
                               }
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center">
                             <EditableCell
                               type="select"
                               options={["Belum", "Sudah"]}
@@ -1422,7 +1437,7 @@ export default function NinaProjectApp() {
                               }
                             />
                           </td>
-                          <td className="px-1 py-1.5 md:px-4 md:py-3 text-center no-print">
+                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center no-print">
                             <button
                               onClick={() => openModal("kwitansi", s)}
                               className="p-1 md:p-2 bg-teal-50 text-teal-600 hover:bg-teal-100 hover:shadow-md rounded-md md:rounded-lg transition-all"
@@ -1518,7 +1533,6 @@ export default function NinaProjectApp() {
                   </div>
                 )}
 
-                {/* TANGGAL HANYA ADA DI MODAL KEUANGAN */}
                 {modalType === "keuangan" && (
                   <div>
                     <label className="block text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
