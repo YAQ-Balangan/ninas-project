@@ -1,15 +1,15 @@
-// File: src/pages/views/TabKeuangan.jsx
 import React from "react";
-import { ReceiptText, Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, ReceiptText } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
-import { formatRp, formatTanggalLengkap } from "../../utils/helpers";
 
-export default function TabKeuangan({
+export default function KeuanganTab({
   filteredKeuangan,
   siswaData,
   handleInlineKeuangan,
   openModal,
   handleDeleteKeuangan,
+  formatRp,
+  formatTanggalLengkap,
 }) {
   return (
     <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">

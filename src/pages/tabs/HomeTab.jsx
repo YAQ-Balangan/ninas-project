@@ -1,4 +1,3 @@
-// File: src/pages/views/TabHome.jsx
 import React from "react";
 import {
   TrendingUp,
@@ -12,15 +11,15 @@ import {
 } from "lucide-react";
 import { formatRp } from "../../utils/helpers";
 
-export default function TabHome({
+export default function HomeTab({
   isSyncing,
   grandTotalKeuangan,
   totalCash,
   totalTransfer,
   siswaData,
   kelasOptions,
-  openModal,
   navToTab,
+  openModal,
 }) {
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
@@ -144,7 +143,7 @@ export default function TabHome({
               <BookOpen className="w-5 h-5" />
             </div>
             <span className="text-[9px] md:text-[10px] font-bold text-slate-700 tracking-wide text-center leading-tight">
-              Jurnal Anak
+              Jurnal Siswa
             </span>
           </button>
           <button

@@ -1,9 +1,8 @@
-// File: src/modals/KwitansiPrint.jsx
 import React from "react";
 import { Camera, Printer, X } from "lucide-react";
 import { formatRp } from "../utils/helpers";
 
-export default function KwitansiPrint({
+export default function KwitansiPopUp({
   activeSiswa,
   formData,
   getNomorKwitansi,
@@ -12,11 +11,8 @@ export default function KwitansiPrint({
   closeModal,
 }) {
   return (
-    <div
-      id="modal-container-kwitansi"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-300 print:p-0 print:bg-white print:static print:block"
-    >
-      <div className="absolute top-4 right-4 flex flex-wrap gap-2 no-print z-50 justify-end">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-300 print:hidden">
+      <div className="absolute top-4 right-4 flex flex-wrap gap-2 z-50 justify-end">
         <button
           onClick={handleDownloadImage}
           disabled={isCapturing}
@@ -41,7 +37,7 @@ export default function KwitansiPrint({
 
       <div
         id="kwitansi-print-area"
-        className="w-full max-w-sm md:max-w-md print:max-w-full print:w-full bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] print:shadow-none p-5 md:p-6 print:p-8 relative print-mode mt-16 md:mt-0 print:mt-0 mx-auto"
+        className="w-full max-w-sm md:max-w-md bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-5 md:p-6 relative mt-16 md:mt-0 mx-auto"
       >
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
           <span

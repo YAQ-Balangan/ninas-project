@@ -16,7 +16,7 @@ export default function BottomNav({ activeTab, navToTab }) {
     { id: "nilai", label: "Nilai", icon: GraduationCap },
     { id: "keuangan", label: "Keuangan", icon: Wallet },
     { id: "jurnal", label: "Jurnal", icon: BookOpen },
-    { id: "kisi", label: "Kisi-Kisi", icon: ClipboardList }, // Menu baru Kisi-Kisi
+    { id: "kisi", label: "Kisi-Kisi", icon: ClipboardList },
   ];
 
   return (
@@ -35,9 +35,7 @@ export default function BottomNav({ activeTab, navToTab }) {
               <div
                 className={`p-1.5 rounded-xl transition-all duration-300 ${
                   isActive
-                    ? item.id === "kisi"
-                      ? "bg-indigo-100 text-indigo-600 shadow-sm" // Warna khusus untuk kisi-kisi (indigo)
-                      : "bg-teal-100 text-teal-600 shadow-sm"
+                    ? "bg-teal-100 text-teal-600 shadow-sm"
                     : "text-slate-400 bg-transparent"
                 }`}
               >
@@ -45,11 +43,7 @@ export default function BottomNav({ activeTab, navToTab }) {
               </div>
               <span
                 className={`text-[9px] font-bold tracking-wide truncate w-full text-center ${
-                  isActive
-                    ? item.id === "kisi"
-                      ? "text-indigo-700"
-                      : "text-teal-700"
-                    : "text-slate-500"
+                  isActive ? "text-teal-700" : "text-slate-500"
                 }`}
               >
                 {item.label}

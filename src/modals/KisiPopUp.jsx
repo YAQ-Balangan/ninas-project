@@ -1,13 +1,10 @@
-// File: src/modals/KisiPrint.jsx
 import React from "react";
 import { X, Printer } from "lucide-react";
 
-export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
-  // Mengambil tahun dari inputan user, atau default ke tahun sekarang/depan jika kosong
+export default function KisiPopUp({ activeSiswa, kisiData, closeModal }) {
   const currentYear = new Date().getFullYear();
   const tahunAjar = kisiData?.tahun || `${currentYear}/${currentYear + 1}`;
 
-  // Fungsi Cetak dengan Penamaan File
   const handlePrint = () => {
     const originalTitle = document.title;
     document.title = `KISI_KISI_${activeSiswa?.nama?.replace(/\s+/g, "_") || "Siswa"}`;
@@ -16,9 +13,10 @@ export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/90 backdrop-blur-sm overflow-y-auto p-4 md:p-8 animate-in fade-in duration-300 print:p-0 print:bg-white print:backdrop-blur-none print:static print:block">
+    // Class 'print:hidden' ditambahkan di sini agar preview ini hilang saat mesin printer menyala
+    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/90 backdrop-blur-sm overflow-y-auto p-4 md:p-8 animate-in fade-in duration-300 print:hidden">
       {/* Tombol Aksi */}
-      <div className="fixed top-4 right-4 flex flex-wrap gap-2 no-print z-50 justify-end">
+      <div className="fixed top-4 right-4 flex flex-wrap gap-2 z-50 justify-end">
         <button
           onClick={handlePrint}
           className="px-3 py-2 md:px-4 md:py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold tracking-widest uppercase rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 text-[9px] md:text-[10px] shadow-[0_8px_20px_rgba(20,184,166,0.3)] transition-all hover:-translate-y-0.5"
@@ -33,13 +31,11 @@ export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
         </button>
       </div>
 
-      {/* AREA DOKUMEN */}
+      {/* AREA DOKUMEN PREVIEW */}
       <div
-        id="kisi-print-area"
-        className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] print:shadow-none print:rounded-none mx-auto p-6 md:p-12 print:p-0 relative mt-16 md:mt-0 print:mt-0 text-black"
+        className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] mx-auto p-6 md:p-12 relative mt-16 md:mt-0 text-black"
         style={{ fontFamily: "'Times New Roman', Times, serif" }}
       >
-        {/* KOP SURAT */}
         <div className="flex items-center gap-4 mb-5 border-b-[3px] border-black pb-3">
           <img
             src="/logo.svg"
@@ -47,16 +43,15 @@ export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
             className="w-20 h-20 md:w-24 md:h-24 object-contain"
           />
           <div className="flex-1 text-center pr-20 md:pr-24">
-            <h1 className="text-xl md:text-2xl print:text-[17px] font-bold uppercase tracking-wider mb-1 leading-tight">
+            <h1 className="text-xl md:text-2xl font-bold uppercase tracking-wider mb-1 leading-tight">
               Kisi-Kisi Penilaian Akademik
             </h1>
-            <h2 className="text-xl md:text-2xl print:text-[17px] font-bold uppercase tracking-wider mb-0 leading-tight">
+            <h2 className="text-xl md:text-2xl font-bold uppercase tracking-wider mb-0 leading-tight">
               Tahun Ajaran {tahunAjar}
             </h2>
           </div>
         </div>
 
-        {/* INFORMASI SISWA */}
         <div className="mb-4">
           <table className="text-sm md:text-base">
             <tbody>
@@ -83,7 +78,6 @@ export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
           </table>
         </div>
 
-        {/* PARAGRAF PENGANTAR */}
         <p className="text-justify mb-4 leading-relaxed indent-8 text-sm md:text-base">
           Bersama ini kami sampaikan kisi-kisi dan materi pokok yang akan
           diujikan kepada ananda{" "}
@@ -92,7 +86,6 @@ export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
           belajar ananda di rumah agar mendapatkan hasil yang maksimal.
         </p>
 
-        {/* TABEL KISI-KISI */}
         <table className="w-full border-collapse border border-black mb-6 text-sm md:text-base">
           <thead>
             <tr className="bg-teal-100">
@@ -122,7 +115,6 @@ export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
           </tbody>
         </table>
 
-        {/* TANDA TANGAN */}
         <div className="flex justify-end pr-4 md:pr-12 text-sm md:text-base">
           <div className="flex flex-col items-center text-center">
             <p className="mb-0">Guru Pengampu,</p>
@@ -138,19 +130,6 @@ export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
           </div>
         </div>
       </div>
-
-      {/* CSS KHUSUS PRINT A4 */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        @media print {
-          @page { size: auto; margin: 2.54cm; }
-          #kisi-print-area { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        }
-      `,
-        }}
-      />
     </div>
   );
 }

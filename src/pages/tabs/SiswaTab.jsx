@@ -1,9 +1,8 @@
-// File: src/pages/views/TabSiswa.jsx
 import React from "react";
 import { Edit, Trash2 } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
 
-export default function TabSiswa({
+export default function SiswaTab({
   filteredSiswa,
   kelasOptions,
   handleInlineSiswa,

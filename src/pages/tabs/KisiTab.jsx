@@ -1,9 +1,8 @@
-// File: src/pages/views/TabKisi.jsx
 import React from "react";
 import { Printer } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
 
-export default function TabKisi({
+export default function KisiTab({
   filteredSiswa,
   kisiData,
   handleInlineKisi,
@@ -12,7 +11,7 @@ export default function TabKisi({
   return (
     <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
       <div className="hidden md:block print:block w-full overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
+        <table className="w-full min-w-[1000px] text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
@@ -76,11 +75,11 @@ export default function TabKisi({
                       type="select"
                       options={[
                         "Ulangan Harian",
-                        "PTS",
-                        "PAS",
+                        "UTS",
+                        "UAS",
                         "Ujian Praktik",
                       ]}
-                      value={k.jenis_ujian || "Ulangan Harian"}
+                      value={k.jenis_ujian || "UAS"}
                       onSave={(val) =>
                         handleInlineKisi(s.id, "jenis_ujian", val)
                       }
@@ -169,11 +168,11 @@ export default function TabKisi({
                       type="select"
                       options={[
                         "Ulangan Harian",
-                        "PTS",
-                        "PAS",
+                        "UTS",
+                        "UAS",
                         "Ujian Praktik",
                       ]}
-                      value={k.jenis_ujian || "Ulangan Harian"}
+                      value={k.jenis_ujian || "UAS"}
                       onSave={(val) =>
                         handleInlineKisi(s.id, "jenis_ujian", val)
                       }

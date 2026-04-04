@@ -1,9 +1,8 @@
-// File: src/pages/views/TabJurnal.jsx
 import React from "react";
 import { Printer } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
 
-export default function TabJurnal({
+export default function JurnalTab({
   filteredSiswa,
   jurnalData,
   handleInlineJurnal,
