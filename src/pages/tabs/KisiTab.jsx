@@ -4,7 +4,7 @@ import { Printer, Trash2 } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
 
 export default function KisiTab({
-  kisiData,
+  filteredKisi, // <--- Sekarang menerima data yang sudah di-filter
   kelasOptions,
   handleInlineKisi,
   handleDeleteKisi,
@@ -41,17 +41,17 @@ export default function KisiTab({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {kisiData.length === 0 ? (
+            {filteredKisi.length === 0 ? (
               <tr>
                 <td
                   colSpan={7}
                   className="py-10 text-center text-slate-400 font-semibold text-sm"
                 >
-                  Belum ada data kisi-kisi. Klik tombol "+ Kisi-Kisi" di atas.
+                  Data tidak ditemukan
                 </td>
               </tr>
             ) : (
-              kisiData.map((k, idx) => (
+              filteredKisi.map((k, idx) => (
                 <tr
                   key={k.id}
                   className="group hover:bg-indigo-50/50 transition-colors align-top"
@@ -133,12 +133,12 @@ export default function KisiTab({
 
       {/* TAMPILAN MOBILE */}
       <div className="md:hidden print:hidden flex flex-col gap-4 p-3 bg-slate-50/50">
-        {kisiData.length === 0 ? (
+        {filteredKisi.length === 0 ? (
           <div className="py-10 text-center text-slate-400 font-semibold text-sm bg-white rounded-xl border border-slate-200">
-            Belum ada data kisi-kisi. Tambahkan di pojok kanan atas.
+            Data tidak ditemukan.
           </div>
         ) : (
-          kisiData.map((k, idx) => (
+          filteredKisi.map((k, idx) => (
             <div
               key={k.id}
               className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"

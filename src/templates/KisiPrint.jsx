@@ -22,7 +22,7 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
         <img src="/logo.svg" alt="Logo" className="w-20 h-20 object-contain" />
         <div className="flex-1 text-center pr-20">
           <h1 className="text-[17px] font-bold uppercase tracking-wider mb-1 leading-tight whitespace-nowrap">
-            Kisi-Kisi Penilaian Akademik
+            Kisi-Kisi Sumatif Akhir Semester II
           </h1>
           <h2 className="text-[17px] font-bold uppercase tracking-wider mb-0 leading-tight whitespace-nowrap">
             Tahun Ajaran {tahunAjar}

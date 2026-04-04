@@ -6,16 +6,14 @@ import {
   Wallet,
   Plus,
   Search,
-  Printer,
-  Download,
-  FileText,
   RefreshCw,
   BookOpen,
   ClipboardList,
+  FileText,
 } from "lucide-react";
 
 import { supabase } from "../utils/supabaseClient";
-import { formatRp, exportToCSV, formatTanggalLengkap } from "../utils/helpers";
+import { formatRp, formatTanggalLengkap } from "../utils/helpers";
 
 import SplashScreen from "../components/SplashScreen";
 import Navbar from "../components/Navbar";
@@ -29,6 +27,7 @@ import JurnalPopUp from "../modals/JurnalPopUp";
 import JurnalPrint from "../templates/JurnalPrint";
 import KisiPopUp from "../modals/KisiPopUp";
 import KisiPrint from "../templates/KisiPrint";
+import TabPrint from "../templates/TabPrint"; // <--- Komponen Baru!
 
 // Import Komponen Tab
 import HomeTab from "./tabs/HomeTab";
@@ -50,7 +49,6 @@ export default function NinaProjectApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCapturing, setIsCapturing] = useState(false);
   const [splashState, setSplashState] = useState("entering");
-
   const [isSyncing, setIsSyncing] = useState(false);
 
   const [kelasOptions, setKelasOptions] = useState([]);
@@ -58,7 +56,7 @@ export default function NinaProjectApp() {
   const [nilaiData, setNilaiData] = useState({});
   const [keuanganData, setKeuanganData] = useState([]);
   const [jurnalData, setJurnalData] = useState({});
-  const [kisiData, setKisiData] = useState([]); // SEKARANG ARRAY
+  const [kisiData, setKisiData] = useState([]);
 
   const [formData, setFormData] = useState({});
   const [activeSiswa, setActiveSiswa] = useState(null);
@@ -83,11 +81,9 @@ export default function NinaProjectApp() {
       setActiveTab(parts[0] || "home");
       setModalType(parts[1] || null);
     };
-
     window.addEventListener("hashchange", handleHashChange);
     if (!window.location.hash) window.location.replace("#home");
     else handleHashChange();
-
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
@@ -95,7 +91,6 @@ export default function NinaProjectApp() {
 
   const openModal = (type, data = null, existData = null) => {
     const today = new Date().toISOString().split("T")[0];
-
     if (type === "bayar_baru") {
       setActiveSiswa(data);
       setFormData({
@@ -134,7 +129,6 @@ export default function NinaProjectApp() {
         siswaData.length > 0
           ? Math.max(...siswaData.map((s) => parseInt(s.id) || 0)) + 1
           : 1;
-
       setFormData(
         data || { id: nextId, nama: "", kelas: kelasOptions[0] || "" },
       );
@@ -152,7 +146,6 @@ export default function NinaProjectApp() {
   const fetchData = async (isBackground = false) => {
     if (!isBackground) setIsLoading(true);
     if (isBackground) setIsSyncing(true);
-
     try {
       const { data: dKelas } = await supabase
         .from("kelas")
@@ -165,7 +158,6 @@ export default function NinaProjectApp() {
             : prev,
         );
       }
-
       const { data: dSiswa } = await supabase.from("siswa").select("*");
       if (dSiswa)
         setSiswaData((prev) =>
@@ -180,7 +172,6 @@ export default function NinaProjectApp() {
           JSON.stringify(prev) !== JSON.stringify(nData) ? nData : prev,
         );
       }
-
       const { data: dKeuangan } = await supabase
         .from("keuangan")
         .select("*")
@@ -200,17 +191,14 @@ export default function NinaProjectApp() {
           JSON.stringify(prev) !== JSON.stringify(jData) ? jData : prev,
         );
       }
-
-      // KISI-KISI: Langsung fetch array dan order by ID
       const { data: dKisi } = await supabase
         .from("kisi_kisi")
         .select("*")
         .order("id", { ascending: false });
-      if (dKisi) {
+      if (dKisi)
         setKisiData((prev) =>
           JSON.stringify(prev) !== JSON.stringify(dKisi) ? dKisi : prev,
         );
-      }
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     } finally {
@@ -221,9 +209,7 @@ export default function NinaProjectApp() {
 
   useEffect(() => {
     fetchData(false);
-    const intervalId = setInterval(() => {
-      fetchData(true);
-    }, 15000);
+    const intervalId = setInterval(() => fetchData(true), 15000);
     return () => clearInterval(intervalId);
   }, []);
 
@@ -241,7 +227,6 @@ export default function NinaProjectApp() {
       .update({ [key]: val })
       .eq("id", id);
   };
-
   const handleInlineNilai = async (siswaId, key, val) => {
     const today = new Date().toISOString().split("T")[0];
     const exist = nilaiData[siswaId] || { siswa_id: siswaId, tanggal: today };
@@ -249,7 +234,6 @@ export default function NinaProjectApp() {
     setNilaiData((prev) => ({ ...prev, [siswaId]: newData }));
     await supabase.from("nilai").upsert({ siswa_id: siswaId, ...newData });
   };
-
   const handleInlineJurnal = async (siswaId, key, val) => {
     const currentYear = new Date().getFullYear().toString();
     const exist = jurnalData[siswaId] || {
@@ -262,7 +246,6 @@ export default function NinaProjectApp() {
       .from("jurnal_observasi")
       .upsert({ siswa_id: siswaId, ...newData });
   };
-
   const handleInlineKisi = async (id, key, val) => {
     setKisiData((prev) =>
       prev.map((k) => (k.id === id ? { ...k, [key]: val } : k)),
@@ -272,7 +255,6 @@ export default function NinaProjectApp() {
       .update({ [key]: val })
       .eq("id", id);
   };
-
   const handleInlineKeuangan = async (transaksiId, key, val) => {
     setKeuanganData((prev) =>
       prev.map((k) => (k.id === transaksiId ? { ...k, [key]: val } : k)),
@@ -283,7 +265,6 @@ export default function NinaProjectApp() {
       .eq("id", transaksiId);
   };
 
-  // --- FUNGSI HAPUS / RESET BARU ---
   const handleAddKisi = async () => {
     const currentYear = new Date().getFullYear().toString();
     const payload = {
@@ -293,30 +274,24 @@ export default function NinaProjectApp() {
       jenis_ujian: "UAS",
       materi: "Materi pokok...",
     };
-
     try {
       const { data, error } = await supabase
         .from("kisi_kisi")
         .insert(payload)
         .select()
         .single();
-      if (data && !error) {
-        setKisiData((prev) => [data, ...prev]);
-      } else {
-        fetchData(true);
-      }
+      if (data && !error) setKisiData((prev) => [data, ...prev]);
+      else fetchData(true);
     } catch (err) {
       console.error("Gagal menambah kisi-kisi", err);
     }
   };
-
   const handleDeleteKisi = async (id) => {
     if (window.confirm("Yakin ingin menghapus kisi-kisi ini?")) {
       setKisiData((prev) => prev.filter((k) => k.id !== id));
       await supabase.from("kisi_kisi").delete().eq("id", id);
     }
   };
-
   const handleDeleteNilai = async (siswaId) => {
     if (
       window.confirm(
@@ -329,7 +304,6 @@ export default function NinaProjectApp() {
       await supabase.from("nilai").delete().eq("siswa_id", siswaId);
     }
   };
-
   const handleDeleteJurnal = async (siswaId) => {
     if (
       window.confirm(
@@ -342,7 +316,6 @@ export default function NinaProjectApp() {
       await supabase.from("jurnal_observasi").delete().eq("siswa_id", siswaId);
     }
   };
-  // -----------------------------------
 
   const handleSaveData = async (e) => {
     e.preventDefault();
@@ -365,22 +338,26 @@ export default function NinaProjectApp() {
           newData[existIndex] = formData;
           setSiswaData(newData);
         } else setSiswaData([...siswaData, formData]);
-        await supabase.from("siswa").upsert({
-          id: formData.id,
-          nama: formData.nama,
-          kelas: formData.kelas,
-        });
+        await supabase
+          .from("siswa")
+          .upsert({
+            id: formData.id,
+            nama: formData.nama,
+            kelas: formData.kelas,
+          });
       } else if (modalType === "nilai") {
         setNilaiData({ ...nilaiData, [activeSiswa.id]: formData });
-        await supabase.from("nilai").upsert({
-          siswa_id: activeSiswa.id,
-          tanggal: formData.tanggal || today,
-          hafalan: formData.hafalan || null,
-          catatan: formData.catatan || null,
-          ulangan: formData.ulangan || null,
-          ujian: formData.ujian || null,
-          keterangan: formData.keterangan || null,
-        });
+        await supabase
+          .from("nilai")
+          .upsert({
+            siswa_id: activeSiswa.id,
+            tanggal: formData.tanggal || today,
+            hafalan: formData.hafalan || null,
+            catatan: formData.catatan || null,
+            ulangan: formData.ulangan || null,
+            ujian: formData.ujian || null,
+            keterangan: formData.keterangan || null,
+          });
       } else if (modalType === "keuangan") {
         if (formData.id) {
           await supabase
@@ -526,6 +503,24 @@ export default function NinaProjectApp() {
     return result;
   }, [keuanganData, siswaData, search, filterKelas, filterBulan, sortOrder]);
 
+  // ---> LOGIKA FILTER BARU UNTUK KISI-KISI <---
+  const filteredKisi = useMemo(() => {
+    if (!Array.isArray(kisiData)) return [];
+    let result = kisiData.filter((k) => {
+      const searchLower = search.toLowerCase();
+      const matchSearch =
+        String(k.mata_pelajaran || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        String(k.materi || "")
+          .toLowerCase()
+          .includes(searchLower);
+      const matchKelas = filterKelas ? k.kelas === filterKelas : true;
+      return matchSearch && matchKelas;
+    });
+    return result;
+  }, [kisiData, search, filterKelas]);
+
   const { grandTotalKeuangan, totalCash, totalTransfer } = useMemo(() => {
     let total = 0,
       cash = 0,
@@ -542,85 +537,6 @@ export default function NinaProjectApp() {
     });
     return { grandTotalKeuangan: total, totalCash: cash, totalTransfer: tf };
   }, [keuanganData]);
-
-  const handleExportNilai = () => {
-    const rows = [
-      [
-        "No",
-        "Nama",
-        "Kelas",
-        "Hafalan",
-        "Catatan",
-        "Ulangan",
-        "Ujian",
-        "Rata-rata",
-        "Keterangan",
-      ],
-    ];
-    filteredSiswa.forEach((s, i) => {
-      const n = nilaiData[String(s.id)] || {};
-      const rata =
-        ((Number(n.hafalan) || 0) +
-          (Number(n.catatan) || 0) +
-          (Number(n.ulangan) || 0) +
-          (Number(n.ujian) || 0)) /
-        4;
-      rows.push([
-        i + 1,
-        s.nama,
-        s.kelas,
-        n.hafalan || 0,
-        n.catatan || 0,
-        n.ulangan || 0,
-        n.ujian || 0,
-        rata.toFixed(2),
-        n.keterangan || "",
-      ]);
-    });
-    exportToCSV("Rekap_Nilai_Ninas_Project", rows);
-  };
-
-  const handleExportKeuangan = () => {
-    const rows = [
-      [
-        "No",
-        "Tanggal",
-        "Nama",
-        "Kelas",
-        "Infaq",
-        "Cicilan",
-        "Konsumsi",
-        "Makan Siang",
-        "Total",
-        "Metode",
-        "Status",
-      ],
-    ];
-    filteredKeuangan.forEach((k, i) => {
-      const s =
-        siswaData.find((siswa) => String(siswa.id) === String(k.siswa_id)) ||
-        {};
-      const total =
-        (Number(k.infaq) || 0) +
-        (Number(k.cicilan) || 0) +
-        (Number(k.konsumsi) || 0) +
-        (Number(k.makan) || 0);
-      rows.push([
-        i + 1,
-        k.tanggal || "-",
-        s.nama || "Unknown",
-        s.kelas || "-",
-        k.infaq || 0,
-        k.cicilan || 0,
-        k.konsumsi || 0,
-        k.makan || 0,
-        total,
-        k.metode || "-",
-        k.status || "-",
-      ]);
-    });
-    exportToCSV("Riwayat_Keuangan_Ninas_Project", rows);
-  };
 
   if (isLoading && splashState === "hidden") {
     return (
@@ -657,7 +573,6 @@ export default function NinaProjectApp() {
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
           @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
           .selection-live-bg { background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #fffbeb, #f0fdfa); background-size: 400% 400%; animation: gradientBG 15s ease infinite; }
-          
           @media print {
             body, html, .selection-live-bg, main, #root, .__next { background: white !important; background-image: none !important; background-color: white !important; margin: 0 !important; padding: 0 !important; }
             body:has(#kwitansi-print-area) main, body:has(#jurnal-print-area) main, body:has(#kisi-print-area) main { display: none !important; }
@@ -775,7 +690,9 @@ export default function NinaProjectApp() {
                       Total{" "}
                       {activeTab === "keuangan"
                         ? filteredKeuangan.length
-                        : filteredSiswa.length}{" "}
+                        : activeTab === "kisi"
+                          ? filteredKisi.length
+                          : filteredSiswa.length}{" "}
                       Data
                     </p>
                   </div>
@@ -789,7 +706,9 @@ export default function NinaProjectApp() {
                     />
                     <input
                       type="text"
-                      placeholder="Cari nama..."
+                      placeholder={
+                        activeTab === "kisi" ? "Cari mapel..." : "Cari nama..."
+                      }
                       className="w-full pl-8 pr-3 py-1.5 md:py-2 bg-white rounded-lg md:rounded-xl text-[10px] md:text-sm font-medium border border-slate-200 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 transition-all shadow-sm"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
@@ -864,38 +783,16 @@ export default function NinaProjectApp() {
                     </button>
                   )}
 
-                  {(activeTab === "nilai" ||
-                    activeTab === "keuangan" ||
-                    activeTab === "siswa" ||
-                    activeTab === "jurnal" ||
-                    activeTab === "kisi") && (
-                    <div className="flex items-center gap-1 md:gap-2 ml-auto md:ml-2 bg-slate-50 p-1 rounded-lg md:rounded-xl border border-slate-200">
-                      <button
-                        onClick={() => window.print()}
-                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-rose-600 hover:bg-rose-50 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-sm transition-all"
-                      >
-                        <FileText size={12} /> PDF
-                      </button>
-                      <button
-                        onClick={() => window.print()}
-                        className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-teal-600 hover:bg-teal-50 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-sm transition-all"
-                      >
-                        <Printer size={12} /> Print
-                      </button>
-                      {(activeTab === "nilai" || activeTab === "keuangan") && (
-                        <button
-                          onClick={
-                            activeTab === "nilai"
-                              ? handleExportNilai
-                              : handleExportKeuangan
-                          }
-                          className="px-2 py-1.5 md:px-3 md:py-2 bg-slate-800 text-white hover:bg-slate-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-md transition-all"
-                        >
-                          <Download size={12} /> Excel
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  {/* TOMBOL PRINT SEKARANG DIAMBIL DARI TABPRINT */}
+                  <TabPrint
+                    activeTab={activeTab}
+                    filteredSiswa={filteredSiswa}
+                    filteredKeuangan={filteredKeuangan}
+                    filteredKisi={filteredKisi}
+                    nilaiData={nilaiData}
+                    jurnalData={jurnalData}
+                    siswaData={siswaData}
+                  />
                 </div>
               </div>
             </div>
@@ -938,10 +835,12 @@ export default function NinaProjectApp() {
               handleDeleteJurnal={handleDeleteJurnal}
             />
           )}
+
+          {/* KisiTab SEKARANG MENGGUNAKAN filteredKisi */}
           {activeTab === "kisi" && (
             <KisiTab
+              filteredKisi={filteredKisi}
               kelasOptions={kelasOptions}
-              kisiData={kisiData}
               handleInlineKisi={handleInlineKisi}
               handleDeleteKisi={handleDeleteKisi}
               openModal={openModal}
@@ -961,7 +860,7 @@ export default function NinaProjectApp() {
             />
           )}
 
-        {/* 1. KWITANSI: Gabungan PopUp Layar & Template Kertas */}
+        {/* 1. KWITANSI */}
         {modalType === "kwitansi" && activeSiswa && formData && (
           <>
             <KwitansiPopUp
@@ -980,7 +879,7 @@ export default function NinaProjectApp() {
           </>
         )}
 
-        {/* 2. JURNAL: Gabungan PopUp Layar & Template Kertas */}
+        {/* 2. JURNAL */}
         {modalType === "cetak_jurnal" && activeSiswa && formData && (
           <>
             <JurnalPopUp
@@ -992,7 +891,7 @@ export default function NinaProjectApp() {
           </>
         )}
 
-        {/* 3. KISI-KISI: Gabungan PopUp Layar & Template Kertas */}
+        {/* 3. KISI-KISI */}
         {modalType === "cetak_kisi" && activeSiswa && formData && (
           <>
             <KisiPopUp
