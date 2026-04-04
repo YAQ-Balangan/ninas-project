@@ -1,114 +1,116 @@
-// File: src/templates/KisiPrint.jsx
 import React from "react";
 
 export default function KisiPrint({ activeSiswa, kisiData }) {
-  if (!activeSiswa) return null;
-
+  if (!activeSiswa || !kisiData) return null;
   const currentYear = new Date().getFullYear();
   const tahunAjar = kisiData?.tahun || `${currentYear}/${currentYear + 1}`;
+  const mapel = kisiData?.mata_pelajaran || "-";
 
-  // Mencegah tulisan "Kelas Kelas 1" (double)
-  const rawKelas = String(activeSiswa?.kelas || "");
+  const rawKelas = String(activeSiswa?.kelas || kisiData?.kelas || "");
   const displayKelas = rawKelas.toLowerCase().includes("kelas")
-    ? rawKelas
-    : `Kelas ${rawKelas}`;
+    ? rawKelas.replace(/kelas/i, "").trim()
+    : rawKelas;
+
+  // Logika Pemecah Baris (Smart Parser) menggunakan :::
+  const barisData = (kisiData?.materi || "")
+    .split("\n")
+    .filter((b) => b.trim() !== "");
+
+  const listSoal = barisData.map((baris, index) => {
+    const adaPilihan = baris.includes(":::");
+    return {
+      no: index + 1,
+      jenis: adaPilihan ? baris.split(":::")[0] : "PG",
+      teks: adaPilihan ? baris.split(":::")[1] : baris,
+    };
+  });
 
   return (
     <div
       id="kisi-print-area"
-      className="hidden print:block w-full max-w-4xl mx-auto bg-white text-black font-serif text-sm"
+      className="hidden print:block w-full max-w-none mx-auto bg-white text-black font-serif p-2"
     >
-      <div className="flex items-center gap-4 mb-5 border-b-[3px] border-black pb-3">
-        <img src="/logo.svg" alt="Logo" className="w-20 h-20 object-contain" />
-        <div className="flex-1 text-center pr-20">
-          <h1 className="text-[17px] font-bold uppercase tracking-wider mb-1 leading-tight whitespace-nowrap">
-            Kisi-Kisi Sumatif Akhir Semester II
-          </h1>
-          <h2 className="text-[17px] font-bold uppercase tracking-wider mb-0 leading-tight whitespace-nowrap">
-            Tahun Ajaran {tahunAjar}
-          </h2>
+      {/* Judul Cetak - SAS I */}
+      <div className="text-center font-bold mb-6">
+        <h1 className="text-[15px] uppercase tracking-wide leading-none">
+          KISI – KISI SOAL SUMATIF AKHIR SEMESTER I
+        </h1>
+        <h2 className="text-[15px] uppercase tracking-wide mt-1">
+          TAHUN PELAJARAN {tahunAjar}
+        </h2>
+      </div>
+
+      {/* Identitas Cetak - Lebar Label Diperkecil agar ":" lebih dekat */}
+      <div className="flex justify-between font-bold text-[11px] mb-3 border-b-0">
+        <div className="space-y-0.5">
+          <div className="flex whitespace-nowrap">
+            <span className="w-32">NAMA SEKOLAH</span>
+            <span className="px-1">:</span>
+            <span className="uppercase">SD ISLAM AL-ISTIQOMAH</span>
+          </div>
+          <div className="flex whitespace-nowrap">
+            <span className="w-32">MATA PELAJARAN</span>
+            <span className="px-1">:</span>
+            <span className="uppercase">{mapel}</span>
+          </div>
+        </div>
+        <div className="space-y-0.5 text-left">
+          <div className="flex whitespace-nowrap">
+            <span className="w-28">KELAS/SEMESTER</span>
+            <span className="px-1">:</span>
+            <span className="uppercase">{displayKelas}/1</span>
+          </div>
+          <div className="flex whitespace-nowrap">
+            <span className="w-28">NAMA PENGAJAR</span>
+            <span className="px-1">:</span>
+            <span className="uppercase">Nina Rahilah, S.Pd.</span>
+          </div>
         </div>
       </div>
 
-      <div className="mb-4">
-        <table>
-          <tbody>
-            <tr>
-              <td className="w-32 pb-0.5 font-semibold">Sasaran Kelas</td>
-              <td className="w-4 pb-0.5 text-center">:</td>
-              <td className="pb-0.5 font-bold uppercase">{displayKelas}</td>
-            </tr>
-            <tr>
-              <td className="pb-0.5 font-semibold">Jenis Penilaian</td>
-              <td className="pb-0.5 text-center">:</td>
-              <td className="pb-0.5 font-medium">
-                {kisiData?.jenis_ujian || "Ujian Tertulis"}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p className="text-justify mb-4 leading-relaxed indent-8">
-        Bersama ini kami sampaikan rincian kisi-kisi dan materi pokok yang akan
-        diujikan kepada siswa/i{" "}
-        <span className="font-bold">{displayKelas}</span>. Kami mengharapkan
-        kerja sama Ayah/Bunda untuk mendampingi serta memotivasi proses belajar
-        ananda di rumah agar mendapatkan hasil yang optimal.
-      </p>
-
-      <table className="w-full border-collapse border border-black mb-6">
+      {/* Tabel Rincian Soal */}
+      <table className="w-full border-collapse border border-black mb-4">
         <thead>
-          <tr className="bg-teal-100">
-            <th className="border border-black py-2 px-3 w-12 text-center uppercase">
-              No.
+          <tr className="bg-gray-50">
+            <th className="border border-black py-1.5 px-2 text-center uppercase text-[10px] w-[65%]">
+              CAPAIAN PEMBELAJARAN
             </th>
-            <th className="border border-black py-2 px-3 w-48 text-center uppercase">
-              Mata Pelajaran
+            <th className="border border-black py-1.5 px-2 w-16 text-center uppercase text-[10px]">
+              NO.SOAL
             </th>
-            <th className="border border-black py-2 px-3 text-center uppercase">
-              Materi Pokok / Indikator
+            <th className="border border-black py-1.5 px-2 w-28 text-center uppercase text-[10px]">
+              BENTUK SOAL
             </th>
           </tr>
         </thead>
-        <tbody className="align-top">
-          <tr>
-            <td className="border border-black py-3 px-3 text-center align-middle">
-              1.
-            </td>
-            <td className="border border-black py-3 px-3 font-bold align-middle text-center bg-gray-50/50">
-              {kisiData?.mata_pelajaran || "-"}
-            </td>
-            <td className="border border-black py-3 px-4 min-h-[150px] text-justify leading-relaxed">
-              {kisiData?.materi ? (
-                <div className="whitespace-pre-line">{kisiData.materi}</div>
-              ) : (
-                <span className="italic text-gray-400">
-                  Belum ada rincian materi.
-                </span>
-              )}
-            </td>
-          </tr>
+        <tbody className="align-top font-sans text-[11px]">
+          {listSoal.map((item) => (
+            <tr key={item.no}>
+              <td className="border border-black py-1.5 px-2 text-justify leading-normal">
+                {item.teks}
+              </td>
+              <td className="border border-black py-1.5 px-2 text-center font-semibold">
+                {item.no}
+              </td>
+              <td className="border border-black py-1.5 px-2 text-center font-bold">
+                {item.jenis}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
 
-      <div className="flex justify-end pr-12">
-        <div className="flex flex-col items-center text-center">
-          <p className="mb-0 font-medium mt-1">Guru Pengampu,</p>
-          <div className="w-32 h-16 flex items-center justify-center overflow-hidden my-0">
-            <img
-              src="/assets/ttd.svg"
-              alt="Tanda Tangan"
-              className="w-full h-full object-cover scale-90 mix-blend-multiply"
-              onError={(e) => (e.target.style.display = "none")}
-            />
-          </div>
-          <p className="font-bold mt-1">Nina Rahilah, S.Pd.</p>
-        </div>
+      {/* Catatan Bawah */}
+      <div className="text-[10px] font-bold uppercase whitespace-nowrap italic">
+        CATATAN: Untuk referensi soal bisa dilihat di soal Latihan kita kemaren
       </div>
+
       <style
         dangerouslySetInnerHTML={{
-          __html: `@media print { @page { size: auto; margin: 2.54cm; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }`,
+          __html: `@media print { 
+            @page { size: auto; margin: 1.5cm; } 
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
+          }`,
         }}
       />
     </div>

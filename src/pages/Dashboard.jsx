@@ -338,26 +338,22 @@ export default function NinaProjectApp() {
           newData[existIndex] = formData;
           setSiswaData(newData);
         } else setSiswaData([...siswaData, formData]);
-        await supabase
-          .from("siswa")
-          .upsert({
-            id: formData.id,
-            nama: formData.nama,
-            kelas: formData.kelas,
-          });
+        await supabase.from("siswa").upsert({
+          id: formData.id,
+          nama: formData.nama,
+          kelas: formData.kelas,
+        });
       } else if (modalType === "nilai") {
         setNilaiData({ ...nilaiData, [activeSiswa.id]: formData });
-        await supabase
-          .from("nilai")
-          .upsert({
-            siswa_id: activeSiswa.id,
-            tanggal: formData.tanggal || today,
-            hafalan: formData.hafalan || null,
-            catatan: formData.catatan || null,
-            ulangan: formData.ulangan || null,
-            ujian: formData.ujian || null,
-            keterangan: formData.keterangan || null,
-          });
+        await supabase.from("nilai").upsert({
+          siswa_id: activeSiswa.id,
+          tanggal: formData.tanggal || today,
+          hafalan: formData.hafalan || null,
+          catatan: formData.catatan || null,
+          ulangan: formData.ulangan || null,
+          ujian: formData.ujian || null,
+          keterangan: formData.keterangan || null,
+        });
       } else if (modalType === "keuangan") {
         if (formData.id) {
           await supabase
@@ -741,7 +737,7 @@ export default function NinaProjectApp() {
                       value={filterBulan}
                       onChange={(e) => setFilterBulan(e.target.value)}
                     >
-                      <option value="">Semua Waktu</option>
+                      <option value="">Semua Bulan</option>
                       <option value="01">Januari</option>
                       <option value="02">Februari</option>
                       <option value="03">Maret</option>
