@@ -1,3 +1,4 @@
+// File: src/templates/KisiPrint.jsx
 import React from "react";
 
 export default function KisiPrint({ activeSiswa, kisiData }) {
@@ -6,47 +7,41 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
   const currentYear = new Date().getFullYear();
   const tahunAjar = kisiData?.tahun || `${currentYear}/${currentYear + 1}`;
 
+  // Mencegah tulisan "Kelas Kelas 1" (double)
+  const rawKelas = String(activeSiswa?.kelas || "");
+  const displayKelas = rawKelas.toLowerCase().includes("kelas")
+    ? rawKelas
+    : `Kelas ${rawKelas}`;
+
   return (
     <div
       id="kisi-print-area"
-      className="hidden print:block w-full max-w-[21cm] mx-auto bg-white text-black font-serif p-0"
+      className="hidden print:block w-full max-w-4xl mx-auto bg-white text-black font-serif text-sm"
     >
-      {/* KOP SURAT */}
-      <div className="flex items-center gap-4 mb-6 border-b-[3px] border-black pb-4">
-        <img src="/logo.svg" alt="Logo" className="w-24 h-24 object-contain" />
-        <div className="flex-1 text-center pr-24">
-          <h1 className="text-2xl font-bold uppercase tracking-widest leading-tight">
+      <div className="flex items-center gap-4 mb-5 border-b-[3px] border-black pb-3">
+        <img src="/logo.svg" alt="Logo" className="w-20 h-20 object-contain" />
+        <div className="flex-1 text-center pr-20">
+          <h1 className="text-[17px] font-bold uppercase tracking-wider mb-1 leading-tight whitespace-nowrap">
             Kisi-Kisi Penilaian Akademik
           </h1>
-          <h2 className="text-xl font-bold uppercase tracking-wider leading-tight">
+          <h2 className="text-[17px] font-bold uppercase tracking-wider mb-0 leading-tight whitespace-nowrap">
             Tahun Ajaran {tahunAjar}
           </h2>
-          <p className="text-xs mt-1 font-sans italic normal-case font-normal text-gray-600">
-            Dokumen Resmi Laporan Capaian Pembelajaran Siswa
-          </p>
         </div>
       </div>
 
-      {/* DATA SISWA */}
-      <div className="mb-6 ml-2">
-        <table className="text-sm border-separate border-spacing-y-1">
+      <div className="mb-4">
+        <table>
           <tbody>
             <tr>
-              <td className="w-32 font-semibold">Nama Siswa</td>
-              <td className="w-4 text-center">:</td>
-              <td className="font-bold uppercase tracking-wide">
-                {activeSiswa?.nama}
-              </td>
+              <td className="w-32 pb-0.5 font-semibold">Sasaran Kelas</td>
+              <td className="w-4 pb-0.5 text-center">:</td>
+              <td className="pb-0.5 font-bold uppercase">{displayKelas}</td>
             </tr>
             <tr>
-              <td className="font-semibold">Kelas / Kelompok</td>
-              <td className="text-center">:</td>
-              <td className="uppercase">{activeSiswa?.kelas}</td>
-            </tr>
-            <tr>
-              <td className="font-semibold">Jenis Penilaian</td>
-              <td className="text-center">:</td>
-              <td className="font-medium">
+              <td className="pb-0.5 font-semibold">Jenis Penilaian</td>
+              <td className="pb-0.5 text-center">:</td>
+              <td className="pb-0.5 font-medium">
                 {kisiData?.jenis_ujian || "Ujian Tertulis"}
               </td>
             </tr>
@@ -54,39 +49,37 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
         </table>
       </div>
 
-      {/* PENGANTAR */}
-      <p className="text-sm text-justify mb-6 leading-relaxed indent-10 px-2">
+      <p className="text-justify mb-4 leading-relaxed indent-8">
         Bersama ini kami sampaikan rincian kisi-kisi dan materi pokok yang akan
-        diujikan kepada ananda
-        <span className="font-bold"> {activeSiswa?.nama}</span>. Kami
-        mengharapkan kerja sama Ayah/Bunda untuk mendampingi serta memotivasi
-        proses belajar ananda di rumah agar mendapatkan hasil yang optimal.
+        diujikan kepada siswa/i{" "}
+        <span className="font-bold">{displayKelas}</span>. Kami mengharapkan
+        kerja sama Ayah/Bunda untuk mendampingi serta memotivasi proses belajar
+        ananda di rumah agar mendapatkan hasil yang optimal.
       </p>
 
-      {/* TABEL MATERI */}
-      <table className="w-full border-collapse border-[1.5px] border-black mb-8">
+      <table className="w-full border-collapse border border-black mb-6">
         <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-black py-3 px-2 w-12 text-center text-sm uppercase">
+          <tr className="bg-teal-100">
+            <th className="border border-black py-2 px-3 w-12 text-center uppercase">
               No.
             </th>
-            <th className="border border-black py-3 px-4 w-56 text-center text-sm uppercase">
+            <th className="border border-black py-2 px-3 w-48 text-center uppercase">
               Mata Pelajaran
             </th>
-            <th className="border border-black py-3 px-4 text-center text-sm uppercase">
+            <th className="border border-black py-2 px-3 text-center uppercase">
               Materi Pokok / Indikator
             </th>
           </tr>
         </thead>
         <tbody className="align-top">
           <tr>
-            <td className="border border-black py-4 px-2 text-center text-sm">
+            <td className="border border-black py-3 px-3 text-center align-middle">
               1.
             </td>
-            <td className="border border-black py-4 px-4 font-bold text-center text-sm bg-gray-50/50">
+            <td className="border border-black py-3 px-3 font-bold align-middle text-center bg-gray-50/50">
               {kisiData?.mata_pelajaran || "-"}
             </td>
-            <td className="border border-black py-4 px-5 text-justify text-[13px] leading-relaxed min-h-[300px]">
+            <td className="border border-black py-3 px-4 min-h-[150px] text-justify leading-relaxed">
               {kisiData?.materi ? (
                 <div className="whitespace-pre-line">{kisiData.materi}</div>
               ) : (
@@ -99,45 +92,23 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
         </tbody>
       </table>
 
-      {/* TANDA TANGAN */}
-      <div className="flex justify-end pr-10">
+      <div className="flex justify-end pr-12">
         <div className="flex flex-col items-center text-center">
-          <p className="text-sm mb-1">
-            Pekanbaru,{" "}
-            {new Date().toLocaleDateString("id-ID", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-          <p className="text-sm font-medium mb-2">Guru Pengampu,</p>
-          <div className="w-40 h-20 flex items-center justify-center overflow-hidden my-1">
+          <p className="mb-0 font-medium mt-1">Guru Pengampu,</p>
+          <div className="w-32 h-16 flex items-center justify-center overflow-hidden my-0">
             <img
               src="/assets/ttd.svg"
               alt="Tanda Tangan"
-              className="w-full h-full object-contain scale-110 mix-blend-multiply"
-              onError={(e) => (e.target.style.opacity = "0")}
+              className="w-full h-full object-cover scale-90 mix-blend-multiply"
+              onError={(e) => (e.target.style.display = "none")}
             />
           </div>
-          <p className="font-bold text-sm underline decoration-1 underline-offset-4">
-            Nina Rahilah, S.Pd.
-          </p>
-          <p className="text-[10px] uppercase tracking-tighter text-gray-500 mt-0.5">
-            NIP. -
-          </p>
+          <p className="font-bold mt-1">Nina Rahilah, S.Pd.</p>
         </div>
       </div>
-
-      {/* STYLE KHUSUS PRINT */}
       <style
         dangerouslySetInnerHTML={{
-          __html: `
-            @media print {
-              @page { size: A4; margin: 2cm; }
-              body { -webkit-print-color-adjust: exact !important; }
-              #kisi-print-area { display: block !important; }
-            }
-          `,
+          __html: `@media print { @page { size: auto; margin: 2.54cm; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }`,
         }}
       />
     </div>

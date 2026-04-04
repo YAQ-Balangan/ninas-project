@@ -1,15 +1,17 @@
 import React from "react";
+import { Trash2 } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
 
 export default function NilaiTab({
   filteredSiswa,
   nilaiData,
   handleInlineNilai,
+  handleDeleteNilai,
 }) {
   return (
     <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
       <div className="hidden md:block print:block w-full overflow-x-auto">
-        <table className="w-full min-w-[850px] text-left">
+        <table className="w-full min-w-[900px] text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
@@ -25,7 +27,7 @@ export default function NilaiTab({
                 Catatan
               </th>
               <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
-                Ulangan Harian
+                Ulangan
               </th>
               <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
                 Ujian
@@ -36,13 +38,16 @@ export default function NilaiTab({
               <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap min-w-[150px]">
                 Keterangan
               </th>
+              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+                Aksi
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredSiswa.length === 0 ? (
               <tr>
                 <td
-                  colSpan="8"
+                  colSpan="9"
                   className="py-10 text-center text-slate-400 font-medium"
                 >
                   Data tidak ditemukan
@@ -136,6 +141,15 @@ export default function NilaiTab({
                         placeholder="..."
                       />
                     </td>
+                    <td className="px-4 py-3 text-center no-print align-middle">
+                      <button
+                        onClick={() => handleDeleteNilai(s.id)}
+                        className="p-1.5 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white font-bold rounded-lg shadow-sm border border-rose-200 transition-colors mx-auto flex"
+                        title="Reset Nilai"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
                   </tr>
                 );
               })
@@ -177,6 +191,12 @@ export default function NilaiTab({
                       </div>
                     </div>
                   </div>
+                  <button
+                    onClick={() => handleDeleteNilai(s.id)}
+                    className="p-2 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
                 <div className="p-3 space-y-1">
                   <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">

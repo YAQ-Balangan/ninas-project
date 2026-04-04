@@ -1,5 +1,5 @@
 import React from "react";
-import { Printer } from "lucide-react";
+import { Printer, Trash2 } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
 
 export default function JurnalTab({
@@ -7,6 +7,7 @@ export default function JurnalTab({
   jurnalData,
   handleInlineJurnal,
   openModal,
+  handleDeleteJurnal,
 }) {
   return (
     <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
@@ -87,12 +88,21 @@ export default function JurnalTab({
                     />
                   </td>
                   <td className="px-4 py-3 text-center no-print align-middle">
-                    <button
-                      onClick={() => openModal("cetak_jurnal", s, j)}
-                      className="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-teal-200 transition-colors uppercase flex items-center justify-center gap-1 mx-auto"
-                    >
-                      <Printer size={14} /> Lihat
-                    </button>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={() => openModal("cetak_jurnal", s, j)}
+                        className="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-teal-200 transition-colors uppercase flex items-center gap-1"
+                      >
+                        <Printer size={14} /> Lihat
+                      </button>
+                      <button
+                        onClick={() => handleDeleteJurnal(s.id)}
+                        className="p-2 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white font-bold rounded-lg shadow-sm border border-rose-200 transition-colors"
+                        title="Reset Jurnal"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -123,6 +133,12 @@ export default function JurnalTab({
                     </div>
                   </div>
                 </div>
+                <button
+                  onClick={() => handleDeleteJurnal(s.id)}
+                  className="p-2 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-colors"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
               <div className="p-3 space-y-3">
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">

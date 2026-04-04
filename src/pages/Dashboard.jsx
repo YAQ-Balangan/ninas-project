@@ -58,7 +58,7 @@ export default function NinaProjectApp() {
   const [nilaiData, setNilaiData] = useState({});
   const [keuanganData, setKeuanganData] = useState([]);
   const [jurnalData, setJurnalData] = useState({});
-  const [kisiData, setKisiData] = useState({});
+  const [kisiData, setKisiData] = useState([]); // SEKARANG ARRAY
 
   const [formData, setFormData] = useState({});
   const [activeSiswa, setActiveSiswa] = useState(null);
@@ -201,12 +201,14 @@ export default function NinaProjectApp() {
         );
       }
 
-      const { data: dKisi } = await supabase.from("kisi_kisi").select("*");
+      // KISI-KISI: Langsung fetch array dan order by ID
+      const { data: dKisi } = await supabase
+        .from("kisi_kisi")
+        .select("*")
+        .order("id", { ascending: false });
       if (dKisi) {
-        const kData = {};
-        dKisi.forEach((k) => (kData[k.siswa_id] = k));
         setKisiData((prev) =>
-          JSON.stringify(prev) !== JSON.stringify(kData) ? kData : prev,
+          JSON.stringify(prev) !== JSON.stringify(dKisi) ? dKisi : prev,
         );
       }
     } catch (error) {
@@ -261,15 +263,14 @@ export default function NinaProjectApp() {
       .upsert({ siswa_id: siswaId, ...newData });
   };
 
-  const handleInlineKisi = async (siswaId, key, val) => {
-    const currentYear = new Date().getFullYear().toString();
-    const exist = kisiData[String(siswaId)] || {
-      siswa_id: siswaId,
-      tahun: `${currentYear}/${parseInt(currentYear) + 1}`,
-    };
-    const newData = { ...exist, [key]: val };
-    setKisiData((prev) => ({ ...prev, [String(siswaId)]: newData }));
-    await supabase.from("kisi_kisi").upsert({ siswa_id: siswaId, ...newData });
+  const handleInlineKisi = async (id, key, val) => {
+    setKisiData((prev) =>
+      prev.map((k) => (k.id === id ? { ...k, [key]: val } : k)),
+    );
+    await supabase
+      .from("kisi_kisi")
+      .update({ [key]: val })
+      .eq("id", id);
   };
 
   const handleInlineKeuangan = async (transaksiId, key, val) => {
@@ -281,6 +282,67 @@ export default function NinaProjectApp() {
       .update({ [key]: val })
       .eq("id", transaksiId);
   };
+
+  // --- FUNGSI HAPUS / RESET BARU ---
+  const handleAddKisi = async () => {
+    const currentYear = new Date().getFullYear().toString();
+    const payload = {
+      kelas: kelasOptions[0] || "VII",
+      tahun: `${currentYear}/${parseInt(currentYear) + 1}`,
+      mata_pelajaran: "Nama Mapel",
+      jenis_ujian: "UAS",
+      materi: "Materi pokok...",
+    };
+
+    try {
+      const { data, error } = await supabase
+        .from("kisi_kisi")
+        .insert(payload)
+        .select()
+        .single();
+      if (data && !error) {
+        setKisiData((prev) => [data, ...prev]);
+      } else {
+        fetchData(true);
+      }
+    } catch (err) {
+      console.error("Gagal menambah kisi-kisi", err);
+    }
+  };
+
+  const handleDeleteKisi = async (id) => {
+    if (window.confirm("Yakin ingin menghapus kisi-kisi ini?")) {
+      setKisiData((prev) => prev.filter((k) => k.id !== id));
+      await supabase.from("kisi_kisi").delete().eq("id", id);
+    }
+  };
+
+  const handleDeleteNilai = async (siswaId) => {
+    if (
+      window.confirm(
+        "Yakin ingin menghapus/mereset semua data nilai untuk siswa ini?",
+      )
+    ) {
+      const newNilai = { ...nilaiData };
+      delete newNilai[siswaId];
+      setNilaiData(newNilai);
+      await supabase.from("nilai").delete().eq("siswa_id", siswaId);
+    }
+  };
+
+  const handleDeleteJurnal = async (siswaId) => {
+    if (
+      window.confirm(
+        "Yakin ingin menghapus/mereset data jurnal observasi siswa ini?",
+      )
+    ) {
+      const newJurnal = { ...jurnalData };
+      delete newJurnal[siswaId];
+      setJurnalData(newJurnal);
+      await supabase.from("jurnal_observasi").delete().eq("siswa_id", siswaId);
+    }
+  };
+  // -----------------------------------
 
   const handleSaveData = async (e) => {
     e.preventDefault();
@@ -378,9 +440,6 @@ export default function NinaProjectApp() {
       const newJurnal = { ...jurnalData };
       delete newJurnal[id];
       setJurnalData(newJurnal);
-      const newKisi = { ...kisiData };
-      delete newKisi[id];
-      setKisiData(newKisi);
       setKeuanganData(
         keuanganData.filter((k) => String(k.siswa_id) !== String(id)),
       );
@@ -796,6 +855,15 @@ export default function NinaProjectApp() {
                     </>
                   )}
 
+                  {activeTab === "kisi" && (
+                    <button
+                      onClick={handleAddKisi}
+                      className="px-2 py-1.5 md:px-3 md:py-2 bg-teal-600 text-white font-bold rounded-lg md:rounded-xl text-[9px] md:text-[11px] tracking-wide uppercase flex items-center gap-1 md:gap-1.5 shadow-md hover:bg-teal-700 transition-colors"
+                    >
+                      <Plus size={12} /> Kisi-Kisi
+                    </button>
+                  )}
+
                   {(activeTab === "nilai" ||
                     activeTab === "keuangan" ||
                     activeTab === "siswa" ||
@@ -847,6 +915,7 @@ export default function NinaProjectApp() {
               filteredSiswa={filteredSiswa}
               nilaiData={nilaiData}
               handleInlineNilai={handleInlineNilai}
+              handleDeleteNilai={handleDeleteNilai}
             />
           )}
           {activeTab === "keuangan" && (
@@ -866,13 +935,15 @@ export default function NinaProjectApp() {
               jurnalData={jurnalData}
               handleInlineJurnal={handleInlineJurnal}
               openModal={openModal}
+              handleDeleteJurnal={handleDeleteJurnal}
             />
           )}
           {activeTab === "kisi" && (
             <KisiTab
-              filteredSiswa={filteredSiswa}
+              kelasOptions={kelasOptions}
               kisiData={kisiData}
               handleInlineKisi={handleInlineKisi}
+              handleDeleteKisi={handleDeleteKisi}
               openModal={openModal}
             />
           )}
