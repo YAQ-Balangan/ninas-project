@@ -1,6 +1,7 @@
 // File: src/components/EditableCell.jsx
 import React, { useState, useEffect } from "react";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+// Tambahkan Banknote (Uang) dan CreditCard (Kartu) dari lucide-react
+import { CheckCircle2, AlertCircle, Banknote, CreditCard } from "lucide-react";
 import { formatRp, formatTanggalLengkap, autoRibuan } from "../utils/helpers";
 
 export default function EditableCell({
@@ -65,7 +66,9 @@ export default function EditableCell({
   }
 
   let displayValue = value;
+
   if (isCurrency && value) displayValue = formatRp(value);
+
   if (type === "date" && value) {
     displayValue = useLongDate
       ? formatTanggalLengkap(value)
@@ -75,6 +78,8 @@ export default function EditableCell({
           year: "2-digit",
         });
   }
+
+  // --- LOGIKA VISUAL UNTUK TAMPILAN DESKTOP (IKON & WARNA) ---
   if (type === "select" && value === "Sudah") {
     displayValue = (
       <span className="text-teal-600 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold whitespace-nowrap">
@@ -85,6 +90,20 @@ export default function EditableCell({
     displayValue = (
       <span className="text-amber-500 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold whitespace-nowrap">
         <AlertCircle size={12} /> Belum
+      </span>
+    );
+  } else if (type === "select" && value === "Cash") {
+    // Tambahan baru untuk gaya Cash
+    displayValue = (
+      <span className="text-blue-600 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold whitespace-nowrap">
+        <Banknote size={12} /> Cash
+      </span>
+    );
+  } else if (type === "select" && value === "Transfer") {
+    // Tambahan baru untuk gaya Transfer
+    displayValue = (
+      <span className="text-purple-600 flex items-center gap-1 text-[9px] md:text-[11px] font-semibold whitespace-nowrap">
+        <CreditCard size={12} /> Transfer
       </span>
     );
   }

@@ -1,7 +1,6 @@
 // File: src/templates/TabPrint.jsx
 import React from "react";
 import { Printer, Download, FileText } from "lucide-react";
-import { exportToCSV } from "../utils/helpers";
 
 export default function TabPrint({
   activeTab,
@@ -12,12 +11,37 @@ export default function TabPrint({
   jurnalData,
   siswaData,
 }) {
+  // Fungsi Cerdas Membuat File Excel Asli (.xls)
+  const exportToTrueExcel = (filename, dataRows) => {
+    let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"></head><body><table border="1">`;
+
+    dataRows.forEach((row, rowIndex) => {
+      tableHtml += "<tr>";
+      row.forEach((cell) => {
+        if (rowIndex === 0) {
+          tableHtml += `<th style="background-color: #0f766e; color: white; font-weight: bold; padding: 8px;">${cell}</th>`;
+        } else {
+          tableHtml += `<td style="padding: 4px;">${cell}</td>`;
+        }
+      });
+      tableHtml += "</tr>";
+    });
+
+    tableHtml += "</table></body></html>";
+
+    const blob = new Blob([tableHtml], { type: "application/vnd.ms-excel" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${filename}.xls`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportSiswa = () => {
     const rows = [["No", "Nama Lengkap", "Kelas"]];
-    filteredSiswa.forEach((s, i) => {
-      rows.push([i + 1, s.nama, s.kelas]);
-    });
-    exportToCSV("Data_Siswa_Ninas_Project", rows);
+    filteredSiswa.forEach((s, i) => rows.push([i + 1, s.nama, s.kelas]));
+    exportToTrueExcel("Data_Siswa_Ninas_Project", rows);
   };
 
   const handleExportNilai = () => {
@@ -54,7 +78,7 @@ export default function TabPrint({
         n.keterangan || "",
       ]);
     });
-    exportToCSV("Rekap_Nilai_Ninas_Project", rows);
+    exportToTrueExcel("Rekap_Nilai_Ninas_Project", rows);
   };
 
   const handleExportKeuangan = () => {
@@ -96,7 +120,7 @@ export default function TabPrint({
         k.status || "-",
       ]);
     });
-    exportToCSV("Riwayat_Keuangan_Ninas_Project", rows);
+    exportToTrueExcel("Riwayat_Keuangan_Ninas_Project", rows);
   };
 
   const handleExportJurnal = () => {
@@ -123,7 +147,7 @@ export default function TabPrint({
         j.rekomendasi || "-",
       ]);
     });
-    exportToCSV("Jurnal_Siswa_Ninas_Project", rows);
+    exportToTrueExcel("Jurnal_Siswa_Ninas_Project", rows);
   };
 
   const handleExportKisi = () => {
@@ -140,7 +164,7 @@ export default function TabPrint({
         k.materi || "-",
       ]);
     });
-    exportToCSV("Kisi_Kisi_Ninas_Project", rows);
+    exportToTrueExcel("Kisi_Kisi_Ninas_Project", rows);
   };
 
   const handleExport = () => {
@@ -151,19 +175,36 @@ export default function TabPrint({
     else if (activeTab === "kisi") handleExportKisi();
   };
 
+  // Fungsi Cetak dengan Nama Dinamis
+  const handlePrint = () => {
+    const dateStr = new Date().toLocaleDateString("id-ID").replace(/\//g, "-");
+    const titleMap = {
+      siswa: "Data_Siswa",
+      nilai: "Rekap_Nilai",
+      keuangan: "Riwayat_Keuangan",
+      jurnal: "Jurnal_Observasi",
+      kisi: "Kisi_Kisi",
+    };
+
+    const originalTitle = document.title;
+    document.title = `Laporan_${titleMap[activeTab]}_${dateStr}`;
+    window.print();
+    document.title = originalTitle; // Kembalikan judul asli
+  };
+
   if (!["nilai", "keuangan", "siswa", "jurnal", "kisi"].includes(activeTab))
     return null;
 
   return (
     <div className="flex items-center gap-1 md:gap-2 ml-auto md:ml-2 bg-slate-50 p-1 rounded-lg md:rounded-xl border border-slate-200">
       <button
-        onClick={() => window.print()}
+        onClick={handlePrint}
         className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-rose-600 hover:bg-rose-50 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-sm transition-all"
       >
         <FileText size={12} /> PDF
       </button>
       <button
-        onClick={() => window.print()}
+        onClick={handlePrint}
         className="px-2 py-1.5 md:px-3 md:py-2 bg-white text-teal-600 hover:bg-teal-50 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-sm transition-all"
       >
         <Printer size={12} /> Print
