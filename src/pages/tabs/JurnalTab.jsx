@@ -12,29 +12,30 @@ export default function JurnalTab({
 }) {
   return (
     <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
-      <div className="hidden md:block print:block w-full overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
+      {/* TAMPILAN DESKTOP */}
+      <div className="hidden md:block print:block w-full">
+        <table className="w-full text-left table-fixed">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-10 border-r border-slate-200">
                 No
               </th>
-              <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-36 border-r border-slate-200">
                 Siswa
               </th>
-              <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest w-28 whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-20">
                 Tahun
               </th>
-              <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[200px]">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest">
                 Potensi
               </th>
-              <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[200px]">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest">
                 Catatan Observasi
               </th>
-              <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[200px]">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest">
                 Rekomendasi
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest no-print w-20">
                 Aksi
               </th>
             </tr>
@@ -44,7 +45,7 @@ export default function JurnalTab({
               <tr>
                 <td
                   colSpan={7}
-                  className="py-10 text-center text-slate-400 font-medium text-sm"
+                  className="py-8 text-center text-slate-400 font-medium text-[11px]"
                 >
                   Data tidak ditemukan
                 </td>
@@ -57,23 +58,23 @@ export default function JurnalTab({
                     key={s.id}
                     className="group hover:bg-teal-50/50 transition-colors align-top"
                   >
-                    <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f0fdfa] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                    <td className="px-2 py-1.5 border-r border-slate-100 text-slate-500 text-center text-[10px] md:text-[11px] font-semibold">
                       {idx + 1}
                     </td>
-                    <td className="sticky left-12 z-20 bg-white group-hover:bg-[#f0fdfa] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-slate-800 text-[10px] md:text-xs font-bold whitespace-nowrap">
-                      {s.nama} <br />
-                      <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
+                    <td className="px-3 py-1.5 border-r border-slate-100 text-slate-800 text-[10px] md:text-[11px] font-bold leading-snug">
+                      <div className="line-clamp-2">{s.nama}</div>
+                      <span className="text-[8px] text-slate-400 tracking-widest uppercase mt-0.5 inline-block">
                         {s.kelas}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs md:text-sm">
+                    <td className="px-2 py-1.5 text-[10px] md:text-[11px]">
                       <EditableCell
                         value={j.tahun}
                         onSave={(val) => handleInlineJurnal(s.id, "tahun", val)}
-                        placeholder="2025/2026"
+                        placeholder="25/26"
                       />
                     </td>
-                    <td className="px-4 py-3 text-xs md:text-sm">
+                    <td className="px-3 py-1.5 text-[10px] md:text-[11px] leading-snug">
                       <EditableCell
                         value={j.potensi}
                         onSave={(val) =>
@@ -82,7 +83,7 @@ export default function JurnalTab({
                         placeholder="Tulis potensi..."
                       />
                     </td>
-                    <td className="px-4 py-3 text-xs md:text-sm">
+                    <td className="px-3 py-1.5 text-[10px] md:text-[11px] leading-snug">
                       <EditableCell
                         value={j.catatan_observasi}
                         onSave={(val) =>
@@ -91,7 +92,7 @@ export default function JurnalTab({
                         placeholder="Tulis catatan..."
                       />
                     </td>
-                    <td className="px-4 py-3 text-xs md:text-sm">
+                    <td className="px-3 py-1.5 text-[10px] md:text-[11px] leading-snug">
                       <EditableCell
                         value={j.rekomendasi}
                         onSave={(val) =>
@@ -100,20 +101,19 @@ export default function JurnalTab({
                         placeholder="Tulis rekomendasi..."
                       />
                     </td>
-                    <td className="px-4 py-3 text-center no-print align-middle">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <td className="px-2 py-1.5 text-center no-print">
+                      <div className="flex flex-col xl:flex-row items-center justify-center gap-1">
                         <button
                           onClick={() => openModal("cetak_jurnal", s, j)}
-                          className="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-teal-200 transition-colors uppercase flex items-center gap-1"
+                          className="px-2 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold rounded text-[9px] tracking-wide shadow-sm border border-teal-200 transition-colors uppercase"
                         >
-                          <Printer size={14} /> Lihat
+                          <Printer size={12} />
                         </button>
                         <button
                           onClick={() => handleDeleteJurnal(s.id)}
-                          className="p-2 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white font-bold rounded-lg shadow-sm border border-rose-200 transition-colors"
-                          title="Reset Jurnal"
+                          className="p-1 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white rounded shadow-sm border border-rose-200 transition-colors"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </td>
@@ -125,6 +125,7 @@ export default function JurnalTab({
         </table>
       </div>
 
+      {/* TAMPILAN MOBILE (TETAP) */}
       <div className="md:hidden print:hidden flex flex-col gap-4 p-3 bg-slate-50/50">
         {filteredSiswa.length === 0 ? (
           <p className="text-center py-10 text-slate-400 text-xs font-medium">

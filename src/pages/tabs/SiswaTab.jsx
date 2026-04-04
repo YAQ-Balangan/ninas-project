@@ -12,20 +12,21 @@ export default function SiswaTab({
 }) {
   return (
     <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
-      <div className="hidden md:block print:block w-full overflow-x-auto">
-        <table className="w-full min-w-[600px] text-left">
+      {/* TAMPILAN DESKTOP (DIPERBAIKI: Pas Layar, Baris Rapat) */}
+      <div className="hidden md:block print:block w-full">
+        <table className="w-full text-left table-auto">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[10px] md:text-[11px] font-bold uppercase tracking-widest w-12 border-r border-slate-200">
                 No
               </th>
-              <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[10px] md:text-[11px] font-bold uppercase tracking-widest border-r border-slate-200">
                 Nama Lengkap
               </th>
-              <th className="px-4 py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[150px] whitespace-nowrap">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest w-40">
                 Kelas
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-center text-[10px] md:text-[11px] font-bold uppercase tracking-widest no-print w-48">
                 Aksi
               </th>
             </tr>
@@ -35,7 +36,7 @@ export default function SiswaTab({
               <tr>
                 <td
                   colSpan={4}
-                  className="py-10 text-center text-slate-400 font-medium text-sm"
+                  className="py-8 text-center text-slate-400 font-medium text-[11px]"
                 >
                   Data tidak ditemukan
                 </td>
@@ -46,16 +47,16 @@ export default function SiswaTab({
                   key={s.id}
                   className="group hover:bg-teal-50/50 transition-colors"
                 >
-                  <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f0fdfa] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                  <td className="px-2 py-1.5 border-r border-slate-100 text-slate-500 text-center text-[10px] md:text-[11px] font-semibold">
                     {idx + 1}
                   </td>
-                  <td className="sticky left-12 z-20 bg-white group-hover:bg-[#f0fdfa] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-slate-800 font-semibold text-left whitespace-nowrap">
+                  <td className="px-3 py-1.5 border-r border-slate-100 text-slate-800 font-semibold text-[10px] md:text-[11px] leading-snug">
                     <EditableCell
                       value={s.nama}
                       onSave={(val) => handleInlineSiswa(s.id, "nama", val)}
                     />
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-1.5 text-[10px] md:text-[11px]">
                     <EditableCell
                       type="select"
                       options={kelasOptions}
@@ -63,25 +64,25 @@ export default function SiswaTab({
                       onSave={(val) => handleInlineSiswa(s.id, "kelas", val)}
                     />
                   </td>
-                  <td className="px-4 py-3 text-center no-print whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-1 md:gap-1.5">
+                  <td className="px-3 py-1.5 text-center no-print">
+                    <div className="flex items-center justify-center gap-1">
                       <button
                         onClick={() => openModal("bayar_baru", s)}
-                        className="px-3 py-1.5 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
+                        className="px-2.5 py-1 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded text-[9px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
                       >
                         Bayar
                       </button>
                       <button
                         onClick={() => openModal("siswa", s)}
-                        className="p-1.5 md:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        className="p-1 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
                       >
-                        <Edit size={14} />
+                        <Edit size={12} />
                       </button>
                       <button
                         onClick={() => handleDeleteSiswa(s.id)}
-                        className="p-1.5 md:p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors"
+                        className="p-1 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded transition-colors"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </td>
@@ -92,6 +93,7 @@ export default function SiswaTab({
         </table>
       </div>
 
+      {/* TAMPILAN MOBILE (TETAP) */}
       <div className="md:hidden print:hidden flex flex-col gap-3 p-3 bg-slate-50/50">
         {filteredSiswa.length === 0 ? (
           <p className="text-center py-10 text-slate-400 text-xs font-medium">

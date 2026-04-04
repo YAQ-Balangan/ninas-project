@@ -1,3 +1,4 @@
+// File: src/pages/tabs/NilaiTab.jsx
 import React from "react";
 import { Trash2 } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
@@ -10,35 +11,36 @@ export default function NilaiTab({
 }) {
   return (
     <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
-      <div className="hidden md:block print:block w-full overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
+      {/* TAMPILAN DESKTOP */}
+      <div className="hidden md:block print:block w-full">
+        <table className="w-full text-left table-auto">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-10 border-r border-slate-200">
                 No
               </th>
-              <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest border-r border-slate-200">
                 Siswa
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-14">
                 Hafalan
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-14">
                 Catatan
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-14">
                 Ulangan
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-14">
                 Ujian
               </th>
-              <th className="px-4 py-4 text-teal-700 bg-teal-50 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-teal-700 bg-teal-50 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-16">
                 Rata-Rata
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap min-w-[150px]">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest">
                 Keterangan
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest no-print w-10">
                 Aksi
               </th>
             </tr>
@@ -48,7 +50,7 @@ export default function NilaiTab({
               <tr>
                 <td
                   colSpan="9"
-                  className="py-10 text-center text-slate-400 font-medium"
+                  className="py-8 text-center text-slate-400 font-medium text-[11px]"
                 >
                   Data tidak ditemukan
                 </td>
@@ -67,17 +69,17 @@ export default function NilaiTab({
                     key={s.id}
                     className="group hover:bg-teal-50/50 transition-colors"
                   >
-                    <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f0fdfa] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                    <td className="px-2 py-1 border-r border-slate-100 text-slate-500 text-center text-[10px] md:text-[11px] font-semibold">
                       {idx + 1}
                     </td>
-                    <td className="sticky left-12 z-20 bg-white group-hover:bg-[#f0fdfa] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold whitespace-nowrap">
+                    <td className="px-2 py-1 border-r border-slate-100 text-left text-slate-800 text-[10px] md:text-[11px] font-bold leading-snug">
                       {s.nama} <br />
-                      <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
+                      <span className="text-[8px] text-slate-400 tracking-widest uppercase">
                         {s.kelas}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="w-16 mx-auto">
+                    <td className="px-1 py-1 text-center text-[10px] md:text-[11px]">
+                      <div className="w-12 mx-auto">
                         <EditableCell
                           alignCenter={true}
                           type="number"
@@ -89,8 +91,8 @@ export default function NilaiTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="w-16 mx-auto">
+                    <td className="px-1 py-1 text-center text-[10px] md:text-[11px]">
+                      <div className="w-12 mx-auto">
                         <EditableCell
                           alignCenter={true}
                           type="number"
@@ -102,8 +104,8 @@ export default function NilaiTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="w-16 mx-auto">
+                    <td className="px-1 py-1 text-center text-[10px] md:text-[11px]">
+                      <div className="w-12 mx-auto">
                         <EditableCell
                           alignCenter={true}
                           type="number"
@@ -115,8 +117,8 @@ export default function NilaiTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="w-16 mx-auto">
+                    <td className="px-1 py-1 text-center text-[10px] md:text-[11px]">
+                      <div className="w-12 mx-auto">
                         <EditableCell
                           alignCenter={true}
                           type="number"
@@ -128,10 +130,10 @@ export default function NilaiTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-teal-700 bg-teal-50/50 text-center text-[11px] md:text-xs font-bold whitespace-nowrap">
+                    <td className="px-2 py-1 text-teal-700 bg-teal-50/50 text-center text-[10px] md:text-[11px] font-bold">
                       {rata > 0 ? rata.toFixed(1) : "-"}
                     </td>
-                    <td className="px-4 py-3 text-center min-w-[150px]">
+                    <td className="px-2 py-1 text-center text-[10px] md:text-[11px]">
                       <EditableCell
                         alignCenter={true}
                         value={n.keterangan}
@@ -141,13 +143,12 @@ export default function NilaiTab({
                         placeholder="..."
                       />
                     </td>
-                    <td className="px-4 py-3 text-center no-print align-middle">
+                    <td className="px-1 py-1 text-center no-print align-middle">
                       <button
                         onClick={() => handleDeleteNilai(s.id)}
-                        className="p-1.5 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white font-bold rounded-lg shadow-sm border border-rose-200 transition-colors mx-auto flex"
-                        title="Reset Nilai"
+                        className="p-1 bg-rose-50 hover:bg-rose-500 text-rose-500 hover:text-white rounded shadow-sm border border-rose-200 transition-colors mx-auto flex"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                       </button>
                     </td>
                   </tr>
@@ -158,6 +159,7 @@ export default function NilaiTab({
         </table>
       </div>
 
+      {/* TAMPILAN MOBILE (TETAP) */}
       <div className="md:hidden print:hidden flex flex-col gap-3 p-3 bg-slate-50/50">
         {filteredSiswa.length === 0 ? (
           <p className="text-center py-10 text-slate-400 text-xs font-medium">

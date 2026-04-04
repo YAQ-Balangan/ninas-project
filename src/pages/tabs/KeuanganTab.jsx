@@ -1,3 +1,4 @@
+// File: src/pages/tabs/KeuanganTab.jsx
 import React from "react";
 import { Edit, Trash2, ReceiptText } from "lucide-react";
 import EditableCell from "../../components/EditableCell";
@@ -13,41 +14,42 @@ export default function KeuanganTab({
 }) {
   return (
     <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
-      <div className="hidden md:block print:block w-full overflow-x-auto">
-        <table className="w-full min-w-[1000px] text-left">
+      {/* TAMPILAN DESKTOP */}
+      <div className="hidden md:block print:block w-full">
+        <table className="w-full text-left table-auto">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+              <th className="px-1.5 py-2 md:py-2.5 text-slate-500 text-center text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-8 border-r border-slate-200">
                 No
               </th>
-              <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-left text-[8px] md:text-[9px] font-bold uppercase tracking-widest border-r border-slate-200 w-32">
                 Siswa
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-1 py-2 md:py-2.5 text-slate-500 text-center text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-24">
                 Tgl Bayar
               </th>
-              <th className="px-4 py-4 text-slate-500 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-right text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-20">
                 Infaq
               </th>
-              <th className="px-4 py-4 text-slate-500 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-right text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-20">
                 Daftar Ulang
               </th>
-              <th className="px-4 py-4 text-slate-500 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-right text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-20">
                 Konsumsi
               </th>
-              <th className="px-4 py-4 text-slate-500 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-right text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-20">
                 Makan
               </th>
-              <th className="px-4 py-4 text-teal-700 bg-teal-50 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-2 py-2 md:py-2.5 text-teal-700 bg-teal-50 text-right text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-20">
                 Total
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-1 py-2 md:py-2.5 text-slate-500 text-center text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-16">
                 Metode
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+              <th className="px-1 py-2 md:py-2.5 text-slate-500 text-center text-[8px] md:text-[9px] font-bold uppercase tracking-widest w-16">
                 Status
               </th>
-              <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+              <th className="px-1 py-2 md:py-2.5 text-slate-500 text-center text-[8px] md:text-[9px] font-bold uppercase tracking-widest no-print w-20">
                 Aksi
               </th>
             </tr>
@@ -57,7 +59,7 @@ export default function KeuanganTab({
               <tr>
                 <td
                   colSpan="11"
-                  className="py-10 text-center text-slate-400 font-medium"
+                  className="py-8 text-center text-slate-400 font-medium text-[11px]"
                 >
                   Data tidak ditemukan
                 </td>
@@ -78,17 +80,17 @@ export default function KeuanganTab({
                     key={k.id || idx}
                     className="group hover:bg-teal-50/50 transition-colors"
                   >
-                    <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f0fdfa] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                    <td className="px-1.5 py-1 border-r border-slate-100 text-slate-500 text-center text-[9px] md:text-[10px] font-semibold">
                       {idx + 1}
                     </td>
-                    <td className="sticky left-12 z-20 bg-white group-hover:bg-[#f0fdfa] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold whitespace-nowrap">
+                    <td className="px-2 py-1 border-r border-slate-100 text-left text-slate-800 text-[9px] md:text-[10px] font-bold leading-snug">
                       {s.nama || "Siswa Dihapus"} <br />
-                      <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
+                      <span className="text-[7px] md:text-[8px] text-slate-400 tracking-widest uppercase">
                         {s.kelas || "-"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="w-28 mx-auto">
+                    <td className="px-1 py-1 text-center text-[9px] md:text-[10px]">
+                      <div className="w-[85px] mx-auto">
                         <EditableCell
                           alignCenter={true}
                           type="date"
@@ -100,8 +102,8 @@ export default function KeuanganTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="w-24 ml-auto">
+                    <td className="px-1 py-1 text-right text-[9px] md:text-[10px]">
+                      <div className="w-[70px] ml-auto">
                         <EditableCell
                           type="number"
                           isCurrency
@@ -113,8 +115,8 @@ export default function KeuanganTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="w-24 ml-auto">
+                    <td className="px-1 py-1 text-right text-[9px] md:text-[10px]">
+                      <div className="w-[70px] ml-auto">
                         <EditableCell
                           type="number"
                           isCurrency
@@ -126,8 +128,8 @@ export default function KeuanganTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="w-24 ml-auto">
+                    <td className="px-1 py-1 text-right text-[9px] md:text-[10px]">
+                      <div className="w-[70px] ml-auto">
                         <EditableCell
                           type="number"
                           isCurrency
@@ -139,8 +141,8 @@ export default function KeuanganTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="w-24 ml-auto">
+                    <td className="px-1 py-1 text-right text-[9px] md:text-[10px]">
+                      <div className="w-[70px] ml-auto">
                         <EditableCell
                           type="number"
                           isCurrency
@@ -152,11 +154,11 @@ export default function KeuanganTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-teal-700 bg-teal-50/50 text-right text-[11px] md:text-xs font-black whitespace-nowrap">
+                    <td className="px-2 py-1 text-teal-700 bg-teal-50/50 text-right text-[9px] md:text-[10px] font-black">
                       {formatRp(total)}
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="w-24 mx-auto">
+                    <td className="px-1 py-1 text-center text-[9px] md:text-[10px]">
+                      <div className="w-14 mx-auto">
                         <EditableCell
                           type="select"
                           options={["Cash", "Transfer"]}
@@ -167,8 +169,8 @@ export default function KeuanganTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="w-24 mx-auto">
+                    <td className="px-1 py-1 text-center text-[9px] md:text-[10px]">
+                      <div className="w-14 mx-auto">
                         <EditableCell
                           type="select"
                           options={["Belum", "Sudah"]}
@@ -179,25 +181,25 @@ export default function KeuanganTab({
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center no-print whitespace-nowrap">
+                    <td className="px-1 py-1 text-center no-print">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => openModal("kwitansi", s, k)}
-                          className="p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg"
+                          className="p-1 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded"
                         >
-                          <ReceiptText size={14} />
+                          <ReceiptText size={12} />
                         </button>
                         <button
                           onClick={() => openModal("edit_keuangan", s, k)}
-                          className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"
+                          className="p-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded"
                         >
-                          <Edit size={14} />
+                          <Edit size={12} />
                         </button>
                         <button
                           onClick={() => handleDeleteKeuangan(k.id)}
-                          className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg"
+                          className="p-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </td>
@@ -209,6 +211,7 @@ export default function KeuanganTab({
         </table>
       </div>
 
+      {/* TAMPILAN MOBILE (TETAP) */}
       <div className="md:hidden flex flex-col gap-3 p-3 bg-slate-50/50">
         {filteredKeuangan.length === 0 ? (
           <p className="text-center py-10 text-slate-400 text-xs">
