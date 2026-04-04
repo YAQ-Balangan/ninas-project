@@ -61,29 +61,35 @@ export default function JurnalPrint({ activeSiswa, jurnalData }) {
         </thead>
         <tbody className="align-top">
           <tr>
-            <td className="border border-black py-2 px-3 text-center">1</td>
-            <td className="border border-black py-2 px-3 font-semibold">
+            <td className="border border-black py-2 px-3 text-center align-middle">
+              1
+            </td>
+            <td className="border border-black py-2 px-3 font-semibold align-middle text-center">
               Potensi
             </td>
-            <td className="border border-black py-2 px-3 min-h-[60px]">
+            <td className="border border-black py-2 px-3 min-h-[60px] text-justify">
               {jurnalData?.potensi || "-"}
             </td>
           </tr>
           <tr>
-            <td className="border border-black py-2 px-3 text-center">2</td>
-            <td className="border border-black py-2 px-3 font-semibold">
+            <td className="border border-black py-2 px-3 text-center align-middle">
+              2
+            </td>
+            <td className="border border-black py-2 px-3 font-semibold align-middle text-center">
               Catatan Observasi
             </td>
-            <td className="border border-black py-2 px-3 min-h-[80px]">
+            <td className="border border-black py-2 px-3 min-h-[80px] text-justify">
               {jurnalData?.catatan_observasi || "-"}
             </td>
           </tr>
           <tr>
-            <td className="border border-black py-2 px-3 text-center">3</td>
-            <td className="border border-black py-2 px-3 font-semibold">
+            <td className="border border-black py-2 px-3 text-center align-middle">
+              3
+            </td>
+            <td className="border border-black py-2 px-3 font-semibold align-middle text-center">
               Rekomendasi
             </td>
-            <td className="border border-black py-2 px-3 min-h-[60px]">
+            <td className="border border-black py-2 px-3 min-h-[60px] text-justify">
               {jurnalData?.rekomendasi || "-"}
             </td>
           </tr>
