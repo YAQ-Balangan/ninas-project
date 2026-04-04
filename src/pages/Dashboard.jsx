@@ -17,6 +17,7 @@ import {
   TrendingUp,
   RefreshCw,
   BookOpen,
+  ClipboardList, // Ikon baru untuk Kisi-Kisi
 } from "lucide-react";
 
 import { supabase } from "../utils/supabaseClient";
@@ -29,6 +30,7 @@ import BottomNav from "../components/BottomNav";
 import FormModal from "../modals/FormModal";
 import KwitansiPrint from "../modals/KwitansiPrint";
 import JurnalPrint from "../modals/JurnalPrint";
+import KisiPrint from "../modals/KisiPrint"; // Import modal KisiPrint
 
 export default function NinaProjectApp() {
   const [activeTab, setActiveTab] = useState("home");
@@ -50,6 +52,7 @@ export default function NinaProjectApp() {
   const [nilaiData, setNilaiData] = useState({});
   const [keuanganData, setKeuanganData] = useState([]);
   const [jurnalData, setJurnalData] = useState({});
+  const [kisiData, setKisiData] = useState({}); // State baru untuk Kisi
 
   const [formData, setFormData] = useState({});
   const [activeSiswa, setActiveSiswa] = useState(null);
@@ -114,6 +117,12 @@ export default function NinaProjectApp() {
       setActiveSiswa(data);
       setFormData({ ...existData });
       window.location.hash = `${activeTab}/cetak_jurnal`;
+      return;
+    } else if (type === "cetak_kisi") {
+      // Modal baru untuk cetak kisi
+      setActiveSiswa(data);
+      setFormData({ ...existData });
+      window.location.hash = `${activeTab}/cetak_kisi`;
       return;
     } else if (type === "siswa") {
       const nextId =
@@ -188,6 +197,16 @@ export default function NinaProjectApp() {
           JSON.stringify(prev) !== JSON.stringify(jData) ? jData : prev,
         );
       }
+
+      // Fetch Kisi-kisi
+      const { data: dKisi } = await supabase.from("kisi_kisi").select("*");
+      if (dKisi) {
+        const kData = {};
+        dKisi.forEach((k) => (kData[k.siswa_id] = k));
+        setKisiData((prev) =>
+          JSON.stringify(prev) !== JSON.stringify(kData) ? kData : prev,
+        );
+      }
     } catch (error) {
       console.error("Gagal mengambil data:", error);
     } finally {
@@ -238,6 +257,19 @@ export default function NinaProjectApp() {
     await supabase
       .from("jurnal_observasi")
       .upsert({ siswa_id: siswaId, ...newData });
+  };
+
+  // Logika simpan otomatis Kisi-Kisi
+  // Logika simpan otomatis Kisi-Kisi beserta default Tahun
+  const handleInlineKisi = async (siswaId, key, val) => {
+    const currentYear = new Date().getFullYear().toString();
+    const exist = kisiData[String(siswaId)] || {
+      siswa_id: siswaId,
+      tahun: `${currentYear}/${parseInt(currentYear) + 1}`,
+    };
+    const newData = { ...exist, [key]: val };
+    setKisiData((prev) => ({ ...prev, [String(siswaId)]: newData }));
+    await supabase.from("kisi_kisi").upsert({ siswa_id: siswaId, ...newData });
   };
 
   const handleInlineKeuangan = async (transaksiId, key, val) => {
@@ -336,10 +368,23 @@ export default function NinaProjectApp() {
   const handleDeleteSiswa = async (id) => {
     if (
       window.confirm(
-        "Yakin ingin menghapus data siswa ini? Semua nilai & keuangan akan terhapus otomatis.",
+        "Yakin ingin menghapus data siswa ini? Semua data terkait akan ikut terhapus.",
       )
     ) {
       setSiswaData(siswaData.filter((s) => s.id !== id));
+      const newNilai = { ...nilaiData };
+      delete newNilai[id];
+      setNilaiData(newNilai);
+      const newJurnal = { ...jurnalData };
+      delete newJurnal[id];
+      setJurnalData(newJurnal);
+      const newKisi = { ...kisiData };
+      delete newKisi[id];
+      setKisiData(newKisi);
+      setKeuanganData(
+        keuanganData.filter((k) => String(k.siswa_id) !== String(id)),
+      );
+
       await supabase.from("siswa").delete().eq("id", id);
     }
   };
@@ -401,7 +446,9 @@ export default function NinaProjectApp() {
 
   const filteredKeuangan = useMemo(() => {
     let result = keuanganData.filter((k) => {
-      const s = siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
+      const s =
+        siswaData.find((siswa) => String(siswa.id) === String(k.siswa_id)) ||
+        {};
       const matchSearch = String(s.nama || "")
         .toLowerCase()
         .includes(search.toLowerCase());
@@ -412,8 +459,10 @@ export default function NinaProjectApp() {
       return matchSearch && matchKelas && matchBulan;
     });
     result.sort((a, b) => {
-      const sA = siswaData.find((s) => s.id === a.siswa_id)?.nama || "";
-      const sB = siswaData.find((s) => s.id === b.siswa_id)?.nama || "";
+      const sA =
+        siswaData.find((s) => String(s.id) === String(a.siswa_id))?.nama || "";
+      const sB =
+        siswaData.find((s) => String(s.id) === String(b.siswa_id))?.nama || "";
       if (sortOrder === "asc") return sA.localeCompare(sB);
       return sB.localeCompare(sA);
     });
@@ -452,7 +501,7 @@ export default function NinaProjectApp() {
       ],
     ];
     filteredSiswa.forEach((s, i) => {
-      const n = nilaiData[s.id] || {};
+      const n = nilaiData[String(s.id)] || {};
       const rata =
         ((Number(n.hafalan) || 0) +
           (Number(n.catatan) || 0) +
@@ -491,7 +540,9 @@ export default function NinaProjectApp() {
       ],
     ];
     filteredKeuangan.forEach((k, i) => {
-      const s = siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
+      const s =
+        siswaData.find((siswa) => String(siswa.id) === String(k.siswa_id)) ||
+        {};
       const total =
         (Number(k.infaq) || 0) +
         (Number(k.cicilan) || 0) +
@@ -552,15 +603,13 @@ export default function NinaProjectApp() {
           
           @media print {
             body, html, .selection-live-bg, main, #root, .__next { background: white !important; background-image: none !important; background-color: white !important; margin: 0 !important; padding: 0 !important; }
-            body:has(#kwitansi-print-area) main, body:has(#jurnal-print-area) main { display: none !important; }
-            nav, .no-print, button, .fixed:not(:has(#kwitansi-print-area)):not(:has(#jurnal-print-area)), .animate-blob1, .animate-blob2, .absolute.inset-0.overflow-hidden { display: none !important; }
-            
+            body:has(#kwitansi-print-area) main, body:has(#jurnal-print-area) main, body:has(#kisi-print-area) main { display: none !important; }
+            nav, .no-print, button, .fixed:not(:has(#kwitansi-print-area)):not(:has(#jurnal-print-area)):not(:has(#kisi-print-area)), .animate-blob1, .animate-blob2, .absolute.inset-0.overflow-hidden { display: none !important; }
             main { display: block !important; width: 100% !important; padding: 0 !important; }
             .bg-white\\/80, .bg-white\\/90, .backdrop-blur-xl, .shadow-sm { background: transparent !important; backdrop-filter: none !important; box-shadow: none !important; border: none !important; }
             .print-kop-laporan { display: flex !important; border-bottom: 2px solid #000 !important; margin-bottom: 15px !important; padding-bottom: 10px !important; }
             main table { min-width: 100% !important; width: 100% !important; border: 1px solid #000 !important; border-collapse: collapse !important; }
             main th, main td { border: 1px solid #000 !important; padding: 6px 4px !important; color: black !important; background-color: transparent !important; position: static !important; box-shadow: none !important; }
-            
             #kwitansi-print-area { display: block !important; position: relative !important; max-width: 550px !important; margin: 0 auto !important; background: white !important; }
             #kwitansi-print-area table { border: none !important; }
             #kwitansi-print-area td, #kwitansi-print-area th { border: none !important; }
@@ -614,7 +663,9 @@ export default function NinaProjectApp() {
                     ? "Rekap Nilai"
                     : activeTab === "jurnal"
                       ? "Jurnal Observasi"
-                      : "Keuangan Siswa"}
+                      : activeTab === "kisi"
+                        ? "Kisi-Kisi"
+                        : "Keuangan Siswa"}
               </h2>
               {filterBulan && activeTab === "keuangan" && (
                 <p className="text-sm font-bold text-slate-600 uppercase mt-1">
@@ -692,65 +743,77 @@ export default function NinaProjectApp() {
                 <h3 className="text-[11px] md:text-sm text-slate-500 font-bold uppercase tracking-[0.2em] mb-4 pl-2">
                   Menu Cepat
                 </h3>
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-3 md:gap-6 max-w-lg md:max-w-none mx-auto">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-lg md:max-w-none mx-auto">
                   <button
                     onClick={() => openModal("siswa")}
-                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(20,184,166,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
+                    className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(20,184,166,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-teal-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-teal-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
-                      <UserPlus className="w-5 h-5 md:w-6 md:h-6" />
+                    <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-teal-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <UserPlus className="w-5 h-5" />
                     </div>
-                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Siswa Baru
                     </span>
                   </button>
                   <button
                     onClick={() => navToTab("keuangan")}
-                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(245,158,11,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
+                    className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(245,158,11,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-amber-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
-                      <Banknote className="w-5 h-5 md:w-6 md:h-6" />
+                    <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-amber-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <Banknote className="w-5 h-5" />
                     </div>
-                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Input Uang
                     </span>
                   </button>
                   <button
                     onClick={() => navToTab("nilai")}
-                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(59,130,246,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
+                    className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(59,130,246,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-blue-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
-                      <FileText className="w-5 h-5 md:w-6 md:h-6" />
+                    <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-blue-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <FileText className="w-5 h-5" />
                     </div>
-                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Input Nilai
                     </span>
                   </button>
                   <button
                     onClick={() => navToTab("keuangan")}
-                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(244,63,94,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
+                    className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(244,63,94,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-rose-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-rose-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
-                      <ReceiptText className="w-5 h-5 md:w-6 md:h-6" />
+                    <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-rose-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <ReceiptText className="w-5 h-5" />
                     </div>
-                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-700 tracking-wide text-center leading-tight">
                       Cetak Kwitansi
                     </span>
                   </button>
                   <button
                     onClick={() => navToTab("jurnal")}
-                    className="group p-3 md:p-5 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.5rem] shadow-sm hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 md:gap-3 relative overflow-hidden"
+                    className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
                   >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-slate-50 text-slate-600 group-hover:bg-emerald-500 group-hover:text-white rounded-xl md:rounded-2xl flex items-center justify-center transition-colors duration-300 shadow-inner">
-                      <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
+                    <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-emerald-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <BookOpen className="w-5 h-5" />
                     </div>
-                    <span className="text-[9px] md:text-xs font-bold text-slate-700 tracking-wide text-center leading-tight">
-                      Jurnal Observasi
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-700 tracking-wide text-center leading-tight">
+                      Jurnal Anak
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => navToTab("kisi")}
+                    className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(99,102,241,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
+                    <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-indigo-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
+                      <ClipboardList className="w-5 h-5" />
+                    </div>
+                    <span className="text-[9px] md:text-[10px] font-bold text-slate-700 tracking-wide text-center leading-tight">
+                      Kisi-Kisi
                     </span>
                   </button>
                 </div>
@@ -818,6 +881,7 @@ export default function NinaProjectApp() {
                     {activeTab === "nilai" && <FileText size={20} />}
                     {activeTab === "keuangan" && <Wallet size={20} />}
                     {activeTab === "jurnal" && <BookOpen size={20} />}
+                    {activeTab === "kisi" && <ClipboardList size={20} />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -917,7 +981,8 @@ export default function NinaProjectApp() {
                   {(activeTab === "nilai" ||
                     activeTab === "keuangan" ||
                     activeTab === "siswa" ||
-                    activeTab === "jurnal") && (
+                    activeTab === "jurnal" ||
+                    activeTab === "kisi") && (
                     <div className="flex items-center gap-1 md:gap-2 ml-auto md:ml-2 bg-slate-50 p-1 rounded-lg md:rounded-xl border border-slate-200">
                       <button
                         onClick={() => window.print()}
@@ -933,7 +998,11 @@ export default function NinaProjectApp() {
                       </button>
                       {(activeTab === "nilai" || activeTab === "keuangan") && (
                         <button
-                          onClick={activeTab === "nilai" ? handleExportNilai : handleExportKeuangan}
+                          onClick={
+                            activeTab === "nilai"
+                              ? handleExportNilai
+                              : handleExportKeuangan
+                          }
                           className="px-2 py-1.5 md:px-3 md:py-2 bg-slate-800 text-white hover:bg-slate-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-widest uppercase flex items-center gap-1 shadow-md transition-all"
                         >
                           <Download size={12} /> Excel
@@ -947,32 +1016,72 @@ export default function NinaProjectApp() {
           )}
 
           {activeTab === "siswa" && (
-            <div className="bg-white/90">
-              <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
+            <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
+              <div className="hidden md:block print:block w-full overflow-x-auto">
                 <table className="w-full min-w-[600px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">No</th>
-                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-5 py-2 md:py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Nama Lengkap</th>
-                      <th className="px-2 md:px-5 py-2 md:py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest w-24 md:w-48 whitespace-nowrap">Kelas</th>
-                      <th className="px-2 md:px-5 py-2 md:py-4 text-slate-500 text-center w-32 md:w-48 text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">Aksi</th>
+                      <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        No
+                      </th>
+                      <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        Nama Lengkap
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[150px] whitespace-nowrap">
+                        Kelas
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+                        Aksi
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredSiswa.map((s, idx) => (
-                      <tr key={s.id} className="group hover:bg-teal-50/30 transition-colors">
-                        <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-2 md:py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">{idx + 1}</td>
-                        <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-5 py-2 md:py-3 text-slate-800 font-semibold text-left whitespace-nowrap">
-                          <EditableCell value={s.nama} onSave={(val) => handleInlineSiswa(s.id, "nama", val)} />
+                      <tr
+                        key={s.id}
+                        className="group hover:bg-teal-50/50 transition-colors"
+                      >
+                        <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f0fdfa] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                          {idx + 1}
                         </td>
-                        <td className="px-2 md:px-5 py-2 md:py-3 whitespace-nowrap">
-                          <EditableCell type="select" options={kelasOptions} value={s.kelas} onSave={(val) => handleInlineSiswa(s.id, "kelas", val)} />
+                        <td className="sticky left-12 z-20 bg-white group-hover:bg-[#f0fdfa] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-slate-800 font-semibold text-left whitespace-nowrap">
+                          <EditableCell
+                            value={s.nama}
+                            onSave={(val) =>
+                              handleInlineSiswa(s.id, "nama", val)
+                            }
+                          />
                         </td>
-                        <td className="px-2 md:px-5 py-2 md:py-3 text-center no-print whitespace-nowrap">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <EditableCell
+                            type="select"
+                            options={kelasOptions}
+                            value={s.kelas}
+                            onSave={(val) =>
+                              handleInlineSiswa(s.id, "kelas", val)
+                            }
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center no-print whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1 md:gap-1.5">
-                            <button onClick={() => openModal("bayar_baru", s)} className="px-2 py-1 md:px-3 md:py-1.5 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-md md:rounded-lg text-[9px] md:text-[10px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase">Bayar</button>
-                            <button onClick={() => openModal("siswa", s)} className="p-1.5 md:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md md:rounded-lg transition-colors"><Edit size={12} className="md:w-3.5 md:h-3.5" /></button>
-                            <button onClick={() => handleDeleteSiswa(s.id)} className="p-1.5 md:p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md md:rounded-lg transition-colors"><Trash2 size={12} className="md:w-3.5 md:h-3.5" /></button>
+                            <button
+                              onClick={() => openModal("bayar_baru", s)}
+                              className="px-3 py-1.5 bg-slate-50 hover:bg-teal-50 text-teal-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-slate-200 transition-colors uppercase"
+                            >
+                              Bayar
+                            </button>
+                            <button
+                              onClick={() => openModal("siswa", s)}
+                              className="p-1.5 md:p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSiswa(s.id)}
+                              className="p-1.5 md:p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -980,29 +1089,69 @@ export default function NinaProjectApp() {
                   </tbody>
                 </table>
               </div>
-              <div className="md:hidden print:hidden flex flex-col gap-3 p-3">
+
+              <div className="md:hidden print:hidden flex flex-col gap-3 p-3 bg-slate-50/50">
                 {filteredSiswa.map((s, idx) => (
-                  <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-2">
-                    <div className="flex items-center gap-2 mb-1 border-b border-slate-100 pb-2">
-                      <div className="w-6 h-6 bg-teal-100 text-teal-700 rounded-md flex items-center justify-center text-[10px] font-black">{idx + 1}</div>
-                      <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">Data Siswa</span>
+                  <div
+                    key={s.id}
+                    className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+                  >
+                    <div className="bg-slate-50/80 p-3 flex justify-between items-center border-b border-slate-100">
+                      <div className="flex items-center gap-3 w-full">
+                        <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-black text-xs shrink-0">
+                          {idx + 1}
+                        </div>
+                        <div className="w-full">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">
+                            Nama Lengkap
+                          </div>
+                          <div className="font-bold text-slate-800 text-sm">
+                            <EditableCell
+                              value={s.nama}
+                              onSave={(val) =>
+                                handleInlineSiswa(s.id, "nama", val)
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[8px] text-slate-400 uppercase font-black tracking-widest block mb-0.5">Nama</span>
-                        <EditableCell value={s.nama} onSave={(val) => handleInlineSiswa(s.id, "nama", val)} />
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <span className="text-[8px] text-slate-400 uppercase font-black tracking-widest block mb-0.5">Kelas</span>
-                        <EditableCell type="select" options={kelasOptions} value={s.kelas} onSave={(val) => handleInlineSiswa(s.id, "kelas", val)} />
+                    <div className="p-3">
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100 border-dashed">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                          Kelas
+                        </span>
+                        <div className="w-32 text-right">
+                          <EditableCell
+                            type="select"
+                            options={kelasOptions}
+                            value={s.kelas}
+                            onSave={(val) =>
+                              handleInlineSiswa(s.id, "kelas", val)
+                            }
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between pt-1">
-                      <button onClick={() => openModal("bayar_baru", s)} className="px-4 py-2 bg-teal-50 text-teal-700 font-bold rounded-lg text-[10px] tracking-widest uppercase border border-teal-100 flex-1 mr-2 flex justify-center">Bayar Uang</button>
-                      <div className="flex gap-2">
-                        <button onClick={() => openModal("siswa", s)} className="p-2 text-blue-600 bg-blue-50 border border-blue-100 rounded-lg"><Edit size={14} /></button>
-                        <button onClick={() => handleDeleteSiswa(s.id)} className="p-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-lg"><Trash2 size={14} /></button>
-                      </div>
+                    <div className="p-3 bg-slate-50/50 flex gap-2 border-t border-slate-100">
+                      <button
+                        onClick={() => openModal("bayar_baru", s)}
+                        className="flex-1 py-2 bg-teal-50 border border-teal-100 text-teal-700 font-bold rounded-xl text-[10px] tracking-widest uppercase flex items-center justify-center"
+                      >
+                        Input Pembayaran
+                      </button>
+                      <button
+                        onClick={() => openModal("siswa", s)}
+                        className="px-3 py-2 text-blue-600 bg-white border border-blue-100 rounded-xl shadow-sm"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSiswa(s.id)}
+                        className="px-3 py-2 text-rose-600 bg-white border border-rose-100 rounded-xl shadow-sm"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1011,123 +1160,721 @@ export default function NinaProjectApp() {
           )}
 
           {activeTab === "nilai" && (
-            <div className="bg-white/90">
-              <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
+            <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
+              <div className="hidden md:block print:block w-full overflow-x-auto">
                 <table className="w-full min-w-[850px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">No</th>
-                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Siswa</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Hafalan</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Catatan</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Ulangan Harian</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ujian</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Rata-Rata</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Ket.</th>
+                      <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        No
+                      </th>
+                      <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        Siswa
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Hafalan
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Catatan
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">
+                        Ulangan Harian
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Ujian
+                      </th>
+                      <th className="px-4 py-4 text-teal-700 bg-teal-50 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Rata-Rata
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap min-w-[150px]">
+                        Keterangan
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredSiswa.map((s, idx) => {
-                      const n = nilaiData[s.id] || {};
-                      const rata = ((Number(n.hafalan) || 0) + (Number(n.catatan) || 0) + (Number(n.ulangan) || 0) + (Number(n.ujian) || 0)) / 4;
-                      return (
-                        <tr key={s.id} className="group hover:bg-teal-50/30 transition-colors">
-                          <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold whitespace-nowrap">{idx + 1}</td>
-                          <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight whitespace-nowrap">{s.nama} <br /><span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">{s.kelas}</span></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="number" value={n.hafalan} onSave={(val) => handleInlineNilai(s.id, "hafalan", val)} placeholder="-" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="number" value={n.catatan} onSave={(val) => handleInlineNilai(s.id, "catatan", val)} placeholder="-" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="number" value={n.ulangan} onSave={(val) => handleInlineNilai(s.id, "ulangan", val)} placeholder="-" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="number" value={n.ujian} onSave={(val) => handleInlineNilai(s.id, "ujian", val)} placeholder="-" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-teal-700 bg-teal-50/50 text-center text-[10px] md:text-xs font-bold whitespace-nowrap">{rata > 0 ? rata.toFixed(1) : "-"}</td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} value={n.keterangan} onSave={(val) => handleInlineNilai(s.id, "keterangan", val)} placeholder="..." /></td>
-                        </tr>
-                      );
-                    })}
+                    {filteredSiswa.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="8"
+                          className="py-10 text-center text-slate-400 font-medium"
+                        >
+                          Data tidak ditemukan
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSiswa.map((s, idx) => {
+                        const n = nilaiData[String(s.id)] || {};
+                        const rata =
+                          ((Number(n.hafalan) || 0) +
+                            (Number(n.catatan) || 0) +
+                            (Number(n.ulangan) || 0) +
+                            (Number(n.ujian) || 0)) /
+                          4;
+                        return (
+                          <tr
+                            key={s.id}
+                            className="group hover:bg-teal-50/50 transition-colors"
+                          >
+                            <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f0fdfa] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                              {idx + 1}
+                            </td>
+                            <td className="sticky left-12 z-20 bg-white group-hover:bg-[#f0fdfa] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold whitespace-nowrap">
+                              {s.nama} <br />
+                              <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
+                                {s.kelas}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <div className="w-16 mx-auto">
+                                <EditableCell
+                                  alignCenter={true}
+                                  type="number"
+                                  value={n.hafalan}
+                                  onSave={(val) =>
+                                    handleInlineNilai(s.id, "hafalan", val)
+                                  }
+                                  placeholder="-"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <div className="w-16 mx-auto">
+                                <EditableCell
+                                  alignCenter={true}
+                                  type="number"
+                                  value={n.catatan}
+                                  onSave={(val) =>
+                                    handleInlineNilai(s.id, "catatan", val)
+                                  }
+                                  placeholder="-"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <div className="w-16 mx-auto">
+                                <EditableCell
+                                  alignCenter={true}
+                                  type="number"
+                                  value={n.ulangan}
+                                  onSave={(val) =>
+                                    handleInlineNilai(s.id, "ulangan", val)
+                                  }
+                                  placeholder="-"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <div className="w-16 mx-auto">
+                                <EditableCell
+                                  alignCenter={true}
+                                  type="number"
+                                  value={n.ujian}
+                                  onSave={(val) =>
+                                    handleInlineNilai(s.id, "ujian", val)
+                                  }
+                                  placeholder="-"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-teal-700 bg-teal-50/50 text-center text-[11px] md:text-xs font-bold whitespace-nowrap">
+                              {rata > 0 ? rata.toFixed(1) : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-center min-w-[150px]">
+                              <EditableCell
+                                alignCenter={true}
+                                value={n.keterangan}
+                                onSave={(val) =>
+                                  handleInlineNilai(s.id, "keterangan", val)
+                                }
+                                placeholder="..."
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="md:hidden print:hidden flex flex-col gap-3 p-3 bg-slate-50/50">
+                {filteredSiswa.length === 0 ? (
+                  <p className="text-center py-10 text-slate-400 text-xs font-medium">
+                    Data tidak ditemukan
+                  </p>
+                ) : (
+                  filteredSiswa.map((s, idx) => {
+                    const n = nilaiData[String(s.id)] || {};
+                    const rata =
+                      ((Number(n.hafalan) || 0) +
+                        (Number(n.catatan) || 0) +
+                        (Number(n.ulangan) || 0) +
+                        (Number(n.ujian) || 0)) /
+                      4;
+                    return (
+                      <div
+                        key={s.id}
+                        className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+                      >
+                        <div className="bg-slate-50/80 p-3 flex justify-between items-center border-b border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-black text-xs shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-800 text-sm">
+                                {s.nama}
+                              </div>
+                              <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                                {s.kelas}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-3 space-y-1">
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Hafalan
+                            </span>
+                            <div className="w-20 text-right">
+                              <EditableCell
+                                type="number"
+                                alignCenter={true}
+                                value={n.hafalan}
+                                onSave={(val) =>
+                                  handleInlineNilai(s.id, "hafalan", val)
+                                }
+                                placeholder="-"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Catatan
+                            </span>
+                            <div className="w-20 text-right">
+                              <EditableCell
+                                type="number"
+                                alignCenter={true}
+                                value={n.catatan}
+                                onSave={(val) =>
+                                  handleInlineNilai(s.id, "catatan", val)
+                                }
+                                placeholder="-"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Ulangan
+                            </span>
+                            <div className="w-20 text-right">
+                              <EditableCell
+                                type="number"
+                                alignCenter={true}
+                                value={n.ulangan}
+                                onSave={(val) =>
+                                  handleInlineNilai(s.id, "ulangan", val)
+                                }
+                                placeholder="-"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Ujian
+                            </span>
+                            <div className="w-20 text-right">
+                              <EditableCell
+                                type="number"
+                                alignCenter={true}
+                                value={n.ujian}
+                                onSave={(val) =>
+                                  handleInlineNilai(s.id, "ujian", val)
+                                }
+                                placeholder="-"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Keterangan
+                            </span>
+                            <div className="w-40 text-right">
+                              <EditableCell
+                                alignCenter={true}
+                                value={n.keterangan}
+                                onSave={(val) =>
+                                  handleInlineNilai(s.id, "keterangan", val)
+                                }
+                                placeholder="..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-teal-50/50 p-3 border-t border-teal-100 flex justify-between items-center">
+                          <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">
+                            Rata-Rata
+                          </span>
+                          <span className="text-base font-black text-teal-700">
+                            {rata > 0 ? rata.toFixed(1) : "-"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
 
           {activeTab === "keuangan" && (
-            <div className="bg-white/90">
-              <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner">
+            <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
+              <div className="hidden md:block print:block w-full overflow-x-auto">
                 <table className="w-full min-w-[1000px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="sticky left-0 z-20 bg-slate-50 w-[40px] md:w-[60px] px-1 md:px-2 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">No</th>
-                      <th className="sticky left-[40px] md:left-[60px] z-20 bg-slate-50 border-r-2 border-slate-200 px-2 md:px-4 py-2 md:py-4 text-slate-500 text-left text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Siswa</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Tgl Bayar</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Infaq</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Daftar Ulang</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Konsumsi</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest leading-tight whitespace-nowrap">Makan Siang</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-teal-700 bg-teal-50 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Total</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Metode</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">Status</th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-slate-500 text-center text-[9px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">Aksi</th>
+                      <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        No
+                      </th>
+                      <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        Siswa
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Tgl Bayar
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Infaq
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Daftar Ulang
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Konsumsi
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Makan
+                      </th>
+                      <th className="px-4 py-4 text-teal-700 bg-teal-50 text-right text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Total
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Metode
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                        Status
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+                        Aksi
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredKeuangan.map((k, idx) => {
-                      const s = siswaData.find((siswa) => siswa.id === k.siswa_id) || {};
-                      const total = (Number(k.infaq) || 0) + (Number(k.cicilan) || 0) + (Number(k.konsumsi) || 0) + (Number(k.makan) || 0);
-                      return (
-                        <tr key={k.id || idx} className="group hover:bg-teal-50/30 transition-colors">
-                          <td className="sticky left-0 z-10 bg-white group-hover:bg-teal-50 px-1 md:px-2 py-1.5 md:py-3 text-slate-500 text-center text-[9px] md:text-xs font-semibold whitespace-nowrap">{idx + 1}</td>
-                          <td className="sticky left-[40px] md:left-[60px] z-10 bg-white group-hover:bg-teal-50 border-r-2 border-slate-200 px-2 md:px-4 py-1.5 md:py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold leading-tight whitespace-nowrap">{s.nama || "Siswa Dihapus"} <br /><span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">{s.kelas || "-"}</span></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell alignCenter={true} type="date" value={k.tanggal} onSave={(val) => handleInlineKeuangan(k.id, "tanggal", val)} placeholder="-" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap"><EditableCell type="number" isCurrency value={k.infaq} onSave={(val) => handleInlineKeuangan(k.id, "infaq", val)} placeholder="0" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap"><EditableCell type="number" isCurrency value={k.cicilan} onSave={(val) => handleInlineKeuangan(k.id, "cicilan", val)} placeholder="0" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap"><EditableCell type="number" isCurrency value={k.konsumsi} onSave={(val) => handleInlineKeuangan(k.id, "konsumsi", val)} placeholder="0" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-right whitespace-nowrap"><EditableCell type="number" isCurrency value={k.makan} onSave={(val) => handleInlineKeuangan(k.id, "makan", val)} placeholder="0" /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-teal-700 bg-teal-50/50 text-right text-[10px] md:text-xs font-bold whitespace-nowrap">{formatRp(total)}</td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell type="select" options={["Cash", "Transfer"]} value={k.metode || "Cash"} onSave={(val) => handleInlineKeuangan(k.id, "metode", val)} /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center whitespace-nowrap"><EditableCell type="select" options={["Belum", "Sudah"]} value={k.status || "Belum"} onSave={(val) => handleInlineKeuangan(k.id, "status", val)} /></td>
-                          <td className="px-1 md:px-4 py-1.5 md:py-3 text-center no-print whitespace-nowrap">
-                            <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => openModal("kwitansi", s, k)} className="p-1 md:p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-md md:rounded-lg"><ReceiptText size={12} className="md:w-3.5 md:h-3.5" /></button>
-                              <button onClick={() => openModal("edit_keuangan", s, k)} className="p-1 md:p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md md:rounded-lg"><Edit size={12} className="md:w-3.5 md:h-3.5" /></button>
-                              <button onClick={() => handleDeleteKeuangan(k.id)} className="p-1 md:p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-md md:rounded-lg"><Trash2 size={12} className="md:w-3.5 md:h-3.5" /></button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {filteredKeuangan.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan="11"
+                          className="py-10 text-center text-slate-400 font-medium"
+                        >
+                          Data tidak ditemukan
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredKeuangan.map((k, idx) => {
+                        const s =
+                          siswaData.find(
+                            (siswa) => String(siswa.id) === String(k.siswa_id),
+                          ) || {};
+                        const total =
+                          (Number(k.infaq) || 0) +
+                          (Number(k.cicilan) || 0) +
+                          (Number(k.konsumsi) || 0) +
+                          (Number(k.makan) || 0);
+                        return (
+                          <tr
+                            key={k.id || idx}
+                            className="group hover:bg-teal-50/50 transition-colors"
+                          >
+                            <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f0fdfa] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                              {idx + 1}
+                            </td>
+                            <td className="sticky left-12 z-20 bg-white group-hover:bg-[#f0fdfa] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-left text-slate-800 text-[10px] md:text-xs font-bold whitespace-nowrap">
+                              {s.nama || "Siswa Dihapus"} <br />
+                              <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
+                                {s.kelas || "-"}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <div className="w-28 mx-auto">
+                                <EditableCell
+                                  alignCenter={true}
+                                  type="date"
+                                  value={k.tanggal}
+                                  onSave={(val) =>
+                                    handleInlineKeuangan(k.id, "tanggal", val)
+                                  }
+                                  placeholder="-"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="w-24 ml-auto">
+                                <EditableCell
+                                  type="number"
+                                  isCurrency
+                                  value={k.infaq}
+                                  onSave={(val) =>
+                                    handleInlineKeuangan(k.id, "infaq", val)
+                                  }
+                                  placeholder="0"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="w-24 ml-auto">
+                                <EditableCell
+                                  type="number"
+                                  isCurrency
+                                  value={k.cicilan}
+                                  onSave={(val) =>
+                                    handleInlineKeuangan(k.id, "cicilan", val)
+                                  }
+                                  placeholder="0"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="w-24 ml-auto">
+                                <EditableCell
+                                  type="number"
+                                  isCurrency
+                                  value={k.konsumsi}
+                                  onSave={(val) =>
+                                    handleInlineKeuangan(k.id, "konsumsi", val)
+                                  }
+                                  placeholder="0"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right whitespace-nowrap">
+                              <div className="w-24 ml-auto">
+                                <EditableCell
+                                  type="number"
+                                  isCurrency
+                                  value={k.makan}
+                                  onSave={(val) =>
+                                    handleInlineKeuangan(k.id, "makan", val)
+                                  }
+                                  placeholder="0"
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-teal-700 bg-teal-50/50 text-right text-[11px] md:text-xs font-black whitespace-nowrap">
+                              {formatRp(total)}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <div className="w-24 mx-auto">
+                                <EditableCell
+                                  type="select"
+                                  options={["Cash", "Transfer"]}
+                                  value={k.metode || "Cash"}
+                                  onSave={(val) =>
+                                    handleInlineKeuangan(k.id, "metode", val)
+                                  }
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <div className="w-24 mx-auto">
+                                <EditableCell
+                                  type="select"
+                                  options={["Belum", "Sudah"]}
+                                  value={k.status || "Belum"}
+                                  onSave={(val) =>
+                                    handleInlineKeuangan(k.id, "status", val)
+                                  }
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center no-print whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => openModal("kwitansi", s, k)}
+                                  className="p-1.5 bg-teal-50 text-teal-600 hover:bg-teal-100 rounded-lg"
+                                >
+                                  <ReceiptText size={14} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    openModal("edit_keuangan", s, k)
+                                  }
+                                  className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteKeuangan(k.id)}
+                                  className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="md:hidden flex flex-col gap-3 p-3 bg-slate-50/50">
+                {filteredKeuangan.length === 0 ? (
+                  <p className="text-center py-10 text-slate-400 text-xs">
+                    Data tidak ditemukan
+                  </p>
+                ) : (
+                  filteredKeuangan.map((k, idx) => {
+                    const s =
+                      siswaData.find(
+                        (siswa) => String(siswa.id) === String(k.siswa_id),
+                      ) || {};
+                    const total =
+                      (Number(k.infaq) || 0) +
+                      (Number(k.cicilan) || 0) +
+                      (Number(k.konsumsi) || 0) +
+                      (Number(k.makan) || 0);
+                    return (
+                      <div
+                        key={k.id || idx}
+                        className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+                      >
+                        <div className="bg-slate-50/80 p-3 flex justify-between items-start border-b border-slate-100">
+                          <div>
+                            <div className="font-black text-slate-800 text-sm">
+                              {s.nama || "Siswa Dihapus"}
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                              {s.kelas || "-"} •{" "}
+                              {k.tanggal
+                                ? formatTanggalLengkap(k.tanggal)
+                                : "-"}
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-1 rounded text-[9px] font-black uppercase ${k.status === "Sudah" ? "bg-emerald-100 text-emerald-700 border border-emerald-200" : "bg-rose-100 text-rose-700 border border-rose-200"}`}
+                          >
+                            {k.status}
+                          </span>
+                        </div>
+                        <div className="p-3 space-y-1">
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Infaq
+                            </span>
+                            <div className="w-28 text-right">
+                              <EditableCell
+                                type="number"
+                                isCurrency
+                                value={k.infaq}
+                                onSave={(val) =>
+                                  handleInlineKeuangan(k.id, "infaq", val)
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Daftar Ulang
+                            </span>
+                            <div className="w-28 text-right">
+                              <EditableCell
+                                type="number"
+                                isCurrency
+                                value={k.cicilan}
+                                onSave={(val) =>
+                                  handleInlineKeuangan(k.id, "cicilan", val)
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Konsumsi
+                            </span>
+                            <div className="w-28 text-right">
+                              <EditableCell
+                                type="number"
+                                isCurrency
+                                value={k.konsumsi}
+                                onSave={(val) =>
+                                  handleInlineKeuangan(k.id, "konsumsi", val)
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5 border-b border-slate-100 border-dashed">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Makan
+                            </span>
+                            <div className="w-28 text-right">
+                              <EditableCell
+                                type="number"
+                                isCurrency
+                                value={k.makan}
+                                onSave={(val) =>
+                                  handleInlineKeuangan(k.id, "makan", val)
+                                }
+                                placeholder="0"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-between items-center py-1.5">
+                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                              Metode
+                            </span>
+                            <div className="w-28 text-right">
+                              <EditableCell
+                                type="select"
+                                options={["Cash", "Transfer"]}
+                                value={k.metode || "Cash"}
+                                onSave={(val) =>
+                                  handleInlineKeuangan(k.id, "metode", val)
+                                }
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-teal-50/50 p-3 border-t border-teal-100 flex justify-between items-center">
+                          <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">
+                            Total Bayar
+                          </span>
+                          <span className="text-base font-black text-teal-700">
+                            {formatRp(total)}
+                          </span>
+                        </div>
+                        <div className="p-3 bg-white flex gap-2 border-t border-slate-100">
+                          <button
+                            onClick={() => openModal("kwitansi", s, k)}
+                            className="flex-1 py-2 bg-teal-600 text-white border border-teal-700 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm"
+                          >
+                            <ReceiptText size={14} /> Kwitansi
+                          </button>
+                          <button
+                            onClick={() => openModal("edit_keuangan", s, k)}
+                            className="px-3 py-2 bg-white text-blue-600 rounded-xl border border-blue-100 shadow-sm"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteKeuangan(k.id)}
+                            className="px-3 py-2 bg-white text-rose-600 rounded-xl border border-rose-100 shadow-sm"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
 
           {activeTab === "jurnal" && (
-            <div className="bg-white/90">
-              <div className="hidden md:block print:block w-full overflow-x-auto shadow-inner rounded-xl border border-slate-200">
+            <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
+              <div className="hidden md:block print:block w-full overflow-x-auto">
                 <table className="w-full min-w-[900px] text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-4 text-slate-500 text-center text-xs font-bold uppercase tracking-widest">No</th>
-                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-48">Siswa</th>
-                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-28">Tahun</th>
-                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-1/4">Potensi</th>
-                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-1/4">Catatan Observasi</th>
-                      <th className="px-4 py-4 text-slate-500 text-left text-xs font-bold uppercase tracking-widest w-1/4">Rekomendasi</th>
-                      <th className="px-4 py-4 text-slate-500 text-center text-xs font-bold uppercase tracking-widest no-print">Aksi</th>
+                      <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        No
+                      </th>
+                      <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        Siswa
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest w-28 whitespace-nowrap">
+                        Tahun
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[200px]">
+                        Potensi
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[200px]">
+                        Catatan Observasi
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[200px]">
+                        Rekomendasi
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+                        Aksi
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredSiswa.map((s, idx) => {
-                      const j = jurnalData[s.id] || {};
+                      const j = jurnalData[String(s.id)] || {};
                       return (
-                        <tr key={s.id} className="group hover:bg-teal-50/30 transition-colors align-top">
-                          <td className="px-4 py-3 text-slate-500 text-center text-xs font-semibold">{idx + 1}</td>
-                          <td className="px-4 py-3 text-slate-800 text-xs font-bold">{s.nama} <br /><span className="text-[9px] text-slate-400 tracking-widest uppercase">{s.kelas}</span></td>
-                          <td className="px-4 py-3 text-sm"><EditableCell value={j.tahun} onSave={(val) => handleInlineJurnal(s.id, "tahun", val)} placeholder="2025/2026" /></td>
-                          <td className="px-4 py-3 text-sm"><EditableCell value={j.potensi} onSave={(val) => handleInlineJurnal(s.id, "potensi", val)} placeholder="Tulis potensi..." /></td>
-                          <td className="px-4 py-3 text-sm"><EditableCell value={j.catatan_observasi} onSave={(val) => handleInlineJurnal(s.id, "catatan_observasi", val)} placeholder="Tulis catatan..." /></td>
-                          <td className="px-4 py-3 text-sm"><EditableCell value={j.rekomendasi} onSave={(val) => handleInlineJurnal(s.id, "rekomendasi", val)} placeholder="Tulis rekomendasi..." /></td>
+                        <tr
+                          key={s.id}
+                          className="group hover:bg-teal-50/50 transition-colors align-top"
+                        >
+                          <td className="sticky left-0 z-20 bg-white group-hover:bg-[#f0fdfa] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                            {idx + 1}
+                          </td>
+                          <td className="sticky left-12 z-20 bg-white group-hover:bg-[#f0fdfa] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-slate-800 text-[10px] md:text-xs font-bold whitespace-nowrap">
+                            {s.nama} <br />
+                            <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
+                              {s.kelas}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs md:text-sm">
+                            <EditableCell
+                              value={j.tahun}
+                              onSave={(val) =>
+                                handleInlineJurnal(s.id, "tahun", val)
+                              }
+                              placeholder="2025/2026"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-xs md:text-sm">
+                            <EditableCell
+                              value={j.potensi}
+                              onSave={(val) =>
+                                handleInlineJurnal(s.id, "potensi", val)
+                              }
+                              placeholder="Tulis potensi..."
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-xs md:text-sm">
+                            <EditableCell
+                              value={j.catatan_observasi}
+                              onSave={(val) =>
+                                handleInlineJurnal(
+                                  s.id,
+                                  "catatan_observasi",
+                                  val,
+                                )
+                              }
+                              placeholder="Tulis catatan..."
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-xs md:text-sm">
+                            <EditableCell
+                              value={j.rekomendasi}
+                              onSave={(val) =>
+                                handleInlineJurnal(s.id, "rekomendasi", val)
+                              }
+                              placeholder="Tulis rekomendasi..."
+                            />
+                          </td>
                           <td className="px-4 py-3 text-center no-print align-middle">
-                            <button onClick={() => openModal("cetak_jurnal", s, j)} className="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-teal-200 transition-colors uppercase flex items-center justify-center gap-1 mx-auto">
+                            <button
+                              onClick={() => openModal("cetak_jurnal", s, j)}
+                              className="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-teal-200 transition-colors uppercase flex items-center justify-center gap-1 mx-auto"
+                            >
                               <Printer size={14} /> Lihat
                             </button>
                           </td>
@@ -1138,41 +1885,309 @@ export default function NinaProjectApp() {
                 </table>
               </div>
 
-              <div className="md:hidden print:hidden flex flex-col gap-4 p-3">
+              <div className="md:hidden print:hidden flex flex-col gap-4 p-3 bg-slate-50/50">
                 {filteredSiswa.map((s, idx) => {
-                  const j = jurnalData[s.id] || {};
+                  const j = jurnalData[String(s.id)] || {};
                   return (
-                    <div key={s.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col gap-3">
-                      <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <div
+                      key={s.id}
+                      className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+                    >
+                      <div className="bg-slate-50/80 p-3 flex justify-between items-center border-b border-slate-100">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-teal-100 text-teal-700 rounded-lg flex items-center justify-center text-xs font-black">{idx + 1}</div>
+                          <div className="w-8 h-8 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center font-black text-xs shrink-0">
+                            {idx + 1}
+                          </div>
                           <div>
-                            <span className="font-bold text-sm text-slate-800">{s.nama}</span>
-                            <span className="block text-[10px] text-slate-400 uppercase tracking-widest">{s.kelas}</span>
+                            <div className="font-bold text-sm text-slate-800">
+                              {s.nama}
+                            </div>
+                            <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                              {s.kelas}
+                            </div>
                           </div>
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Tahun Ajaran</span>
-                          <EditableCell value={j.tahun} onSave={(val) => handleInlineJurnal(s.id, "tahun", val)} placeholder="2025/2026" />
+                      <div className="p-3 space-y-3">
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
+                            Tahun Ajaran
+                          </span>
+                          <div className="text-sm font-semibold text-slate-700">
+                            <EditableCell
+                              value={j.tahun}
+                              onSave={(val) =>
+                                handleInlineJurnal(s.id, "tahun", val)
+                              }
+                              placeholder="2025/2026"
+                            />
+                          </div>
                         </div>
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Potensi</span>
-                          <EditableCell value={j.potensi} onSave={(val) => handleInlineJurnal(s.id, "potensi", val)} placeholder="Ketik potensi..." />
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
+                            Potensi Siswa
+                          </span>
+                          <div className="text-sm text-slate-700">
+                            <EditableCell
+                              value={j.potensi}
+                              onSave={(val) =>
+                                handleInlineJurnal(s.id, "potensi", val)
+                              }
+                              placeholder="Ketik potensi..."
+                            />
+                          </div>
                         </div>
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Catatan Observasi</span>
-                          <EditableCell value={j.catatan_observasi} onSave={(val) => handleInlineJurnal(s.id, "catatan_observasi", val)} placeholder="Ketik catatan..." />
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
+                            Catatan Observasi
+                          </span>
+                          <div className="text-sm text-slate-700">
+                            <EditableCell
+                              value={j.catatan_observasi}
+                              onSave={(val) =>
+                                handleInlineJurnal(
+                                  s.id,
+                                  "catatan_observasi",
+                                  val,
+                                )
+                              }
+                              placeholder="Ketik catatan..."
+                            />
+                          </div>
                         </div>
-                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                          <span className="text-[10px] text-slate-500 font-bold uppercase block mb-1">Rekomendasi</span>
-                          <EditableCell value={j.rekomendasi} onSave={(val) => handleInlineJurnal(s.id, "rekomendasi", val)} placeholder="Ketik rekomendasi..." />
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
+                            Rekomendasi
+                          </span>
+                          <div className="text-sm text-slate-700">
+                            <EditableCell
+                              value={j.rekomendasi}
+                              onSave={(val) =>
+                                handleInlineJurnal(s.id, "rekomendasi", val)
+                              }
+                              placeholder="Ketik rekomendasi..."
+                            />
+                          </div>
                         </div>
                       </div>
-                      <button onClick={() => openModal("cetak_jurnal", s, j)} className="w-full mt-2 py-2.5 bg-teal-600 text-white font-bold rounded-lg text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-md">
-                        <Printer size={16} /> Cetak Jurnal A4
-                      </button>
+                      <div className="p-3 bg-white border-t border-slate-100">
+                        <button
+                          onClick={() => openModal("cetak_jurnal", s, j)}
+                          className="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-sm transition-colors"
+                        >
+                          <Printer size={16} /> Cetak Jurnal A4
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB BARU: KISI-KISI */}
+          {activeTab === "kisi" && (
+            <div className="bg-white/90 shadow-sm border border-slate-200 rounded-xl md:rounded-2xl overflow-hidden">
+              {/* DESKTOP VIEW KISI */}
+              <div className="hidden md:block print:block w-full overflow-x-auto">
+                <table className="w-full min-w-[1000px] text-left">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="sticky left-0 z-30 bg-slate-50 w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-200 px-2 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        No
+                      </th>
+                      <th className="sticky left-12 z-30 bg-slate-50 min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest whitespace-nowrap outline outline-1 outline-slate-200">
+                        Siswa
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest w-28 whitespace-nowrap">
+                        Tahun
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest w-40 whitespace-nowrap">
+                        Mata Pelajaran
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest w-32 whitespace-nowrap">
+                        Jenis Ujian
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-left text-[10px] md:text-xs font-bold uppercase tracking-widest min-w-[300px]">
+                        Materi Pokok / Indikator
+                      </th>
+                      <th className="px-4 py-4 text-slate-500 text-center text-[10px] md:text-xs font-bold uppercase tracking-widest no-print whitespace-nowrap">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredSiswa.map((s, idx) => {
+                      const k = kisiData[String(s.id)] || {};
+                      return (
+                        <tr
+                          key={s.id}
+                          className="group hover:bg-indigo-50/50 transition-colors align-top"
+                        >
+                          <td className="sticky left-0 z-20 bg-white group-hover:bg-[#eef2ff] w-12 min-w-[3rem] max-w-[3rem] border-r border-slate-100 px-2 py-3 text-slate-500 text-center text-[10px] md:text-xs font-semibold whitespace-nowrap">
+                            {idx + 1}
+                          </td>
+                          <td className="sticky left-12 z-20 bg-white group-hover:bg-[#eef2ff] min-w-[200px] border-r border-slate-200 shadow-[4px_0_10px_rgba(0,0,0,0.04)] px-4 py-3 text-slate-800 text-[10px] md:text-xs font-bold whitespace-nowrap">
+                            {s.nama} <br />
+                            <span className="text-[7px] md:text-[9px] text-slate-400 tracking-widest uppercase">
+                              {s.kelas}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs md:text-sm">
+                            <EditableCell
+                              value={k.tahun}
+                              onSave={(val) =>
+                                handleInlineKisi(s.id, "tahun", val)
+                              }
+                              placeholder="2025/2026"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-xs md:text-sm">
+                            <EditableCell
+                              value={k.mata_pelajaran}
+                              onSave={(val) =>
+                                handleInlineKisi(s.id, "mata_pelajaran", val)
+                              }
+                              placeholder="B. Indonesia..."
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-xs md:text-sm text-center">
+                            <EditableCell
+                              type="select"
+                              options={[
+                                "Ulangan Harian",
+                                "UTS",
+                                "UAS",
+                                "Ujian Praktik",
+                              ]}
+                              value={k.jenis_ujian || "UAS"}
+                              onSave={(val) =>
+                                handleInlineKisi(s.id, "jenis_ujian", val)
+                              }
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-xs md:text-sm">
+                            <EditableCell
+                              value={k.materi}
+                              onSave={(val) =>
+                                handleInlineKisi(s.id, "materi", val)
+                              }
+                              placeholder="Tulis materi pokok..."
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-center no-print align-middle">
+                            <button
+                              onClick={() => openModal("cetak_kisi", s, k)}
+                              className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg text-[10px] tracking-wide shadow-sm border border-indigo-200 transition-colors uppercase flex items-center justify-center gap-1 mx-auto"
+                            >
+                              <Printer size={14} /> Lihat
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE VIEW KISI */}
+              <div className="md:hidden print:hidden flex flex-col gap-4 p-3 bg-slate-50/50">
+                {filteredSiswa.map((s, idx) => {
+                  const k = kisiData[String(s.id)] || {};
+                  return (
+                    <div
+                      key={s.id}
+                      className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+                    >
+                      <div className="bg-slate-50/80 p-3 flex justify-between items-center border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs shrink-0">
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <div className="font-bold text-sm text-slate-800">
+                              {s.nama}
+                            </div>
+                            <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                              {s.kelas}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-3 space-y-3">
+                        <div className="flex gap-2">
+                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 w-24 shrink-0">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
+                              Tahun
+                            </span>
+                            <div className="text-sm font-semibold text-slate-700">
+                              <EditableCell
+                                value={k.tahun}
+                                onSave={(val) =>
+                                  handleInlineKisi(s.id, "tahun", val)
+                                }
+                                placeholder="25/26"
+                              />
+                            </div>
+                          </div>
+                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex-1">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
+                              Mapel
+                            </span>
+                            <div className="text-sm font-semibold text-slate-700">
+                              <EditableCell
+                                value={k.mata_pelajaran}
+                                onSave={(val) =>
+                                  handleInlineKisi(s.id, "mata_pelajaran", val)
+                                }
+                                placeholder="Ketik Mapel..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
+                            Jenis Ujian
+                          </span>
+                          <div className="text-sm text-slate-700">
+                            <EditableCell
+                              type="select"
+                              options={[
+                                "Ulangan Harian",
+                                "UTS",
+                                "UAS",
+                                "Ujian Praktik",
+                              ]}
+                              value={k.jenis_ujian || "UAS"}
+                              onSave={(val) =>
+                                handleInlineKisi(s.id, "jenis_ujian", val)
+                              }
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
+                            Materi Pokok / Indikator
+                          </span>
+                          <div className="text-sm text-slate-700">
+                            <EditableCell
+                              value={k.materi}
+                              onSave={(val) =>
+                                handleInlineKisi(s.id, "materi", val)
+                              }
+                              placeholder="Ketik rincian materi..."
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-white border-t border-slate-100">
+                        <button
+                          onClick={() => openModal("cetak_kisi", s, k)}
+                          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs tracking-widest uppercase flex items-center justify-center gap-2 shadow-sm transition-colors"
+                        >
+                          <Printer size={16} /> Cetak Kisi-Kisi A4
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -1181,16 +2196,44 @@ export default function NinaProjectApp() {
           )}
         </main>
 
-        {modalType && !["kwitansi", "cetak_jurnal"].includes(modalType) && (
-          <FormModal modalType={modalType} formData={formData} setFormData={setFormData} handleSaveData={handleSaveData} closeModal={closeModal} kelasOptions={kelasOptions} />
-        )}
+        {modalType &&
+          !["kwitansi", "cetak_jurnal", "cetak_kisi"].includes(modalType) && (
+            <FormModal
+              modalType={modalType}
+              formData={formData}
+              setFormData={setFormData}
+              handleSaveData={handleSaveData}
+              closeModal={closeModal}
+              kelasOptions={kelasOptions}
+            />
+          )}
 
         {modalType === "kwitansi" && activeSiswa && formData && (
-          <KwitansiPrint activeSiswa={activeSiswa} formData={formData} getNomorKwitansi={getNomorKwitansi} handleDownloadImage={handleDownloadImage} isCapturing={isCapturing} closeModal={closeModal} />
+          <KwitansiPrint
+            activeSiswa={activeSiswa}
+            formData={formData}
+            getNomorKwitansi={getNomorKwitansi}
+            handleDownloadImage={handleDownloadImage}
+            isCapturing={isCapturing}
+            closeModal={closeModal}
+          />
         )}
 
         {modalType === "cetak_jurnal" && activeSiswa && formData && (
-          <JurnalPrint activeSiswa={activeSiswa} jurnalData={formData} closeModal={closeModal} />
+          <JurnalPrint
+            activeSiswa={activeSiswa}
+            jurnalData={formData}
+            closeModal={closeModal}
+          />
+        )}
+
+        {/* Render Modal KisiPrint */}
+        {modalType === "cetak_kisi" && activeSiswa && formData && (
+          <KisiPrint
+            activeSiswa={activeSiswa}
+            kisiData={formData}
+            closeModal={closeModal}
+          />
         )}
       </div>
     </>

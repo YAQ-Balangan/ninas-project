@@ -1,17 +1,17 @@
-// File: src/modals/JurnalPrint.jsx
+// File: src/modals/KisiPrint.jsx
 import React from "react";
 import { X, Printer } from "lucide-react";
 
-export default function JurnalPrint({ activeSiswa, jurnalData, closeModal }) {
-  const tahunAjar = jurnalData?.tahun || new Date().getFullYear();
+export default function KisiPrint({ activeSiswa, kisiData, closeModal }) {
+  // Mengambil tahun dari inputan user, atau default ke tahun sekarang/depan jika kosong
+  const currentYear = new Date().getFullYear();
+  const tahunAjar = kisiData?.tahun || `${currentYear}/${currentYear + 1}`;
 
   // Fungsi Cetak dengan Penamaan File
   const handlePrint = () => {
     const originalTitle = document.title;
-    // Mengatur nama file PDF: Jurnal (Nama Siswa).pdf
-    document.title = `JURNAL ${activeSiswa?.nama || "Siswa"}`;
+    document.title = `KISI_KISI_${activeSiswa?.nama?.replace(/\s+/g, "_") || "Siswa"}`;
     window.print();
-    // Mengembalikan judul asli setelah jendela print tertutup
     document.title = originalTitle;
   };
 
@@ -35,11 +35,11 @@ export default function JurnalPrint({ activeSiswa, jurnalData, closeModal }) {
 
       {/* AREA DOKUMEN */}
       <div
-        id="jurnal-print-area"
+        id="kisi-print-area"
         className="w-full max-w-4xl bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] print:shadow-none print:rounded-none mx-auto p-6 md:p-12 print:p-0 relative mt-16 md:mt-0 print:mt-0 text-black"
         style={{ fontFamily: "'Times New Roman', Times, serif" }}
       >
-        {/* KOP SURAT - mb-8 diubah jadi mb-5, pb-4 jadi pb-3 */}
+        {/* KOP SURAT */}
         <div className="flex items-center gap-4 mb-5 border-b-[3px] border-black pb-3">
           <img
             src="/logo.svg"
@@ -48,95 +48,75 @@ export default function JurnalPrint({ activeSiswa, jurnalData, closeModal }) {
           />
           <div className="flex-1 text-center pr-20 md:pr-24">
             <h1 className="text-xl md:text-2xl print:text-[17px] font-bold uppercase tracking-wider mb-1 leading-tight">
-              Jurnal Observasi Perkembangan Siswa
+              Kisi-Kisi Penilaian Akademik
             </h1>
             <h2 className="text-xl md:text-2xl print:text-[17px] font-bold uppercase tracking-wider mb-0 leading-tight">
-              Kelas IV Semester II
+              Tahun Ajaran {tahunAjar}
             </h2>
           </div>
         </div>
 
-        {/* INFORMASI SISWA - mb-6 diubah jadi mb-4 */}
+        {/* INFORMASI SISWA */}
         <div className="mb-4">
           <table className="text-sm md:text-base">
             <tbody>
               <tr>
-                <td className="w-24 pb-0.5">Nama</td>
+                <td className="w-28 pb-0.5">Nama Siswa</td>
                 <td className="w-4 pb-0.5 text-center">:</td>
-                <td className="pb-0.5 font-bold">{activeSiswa?.nama}</td>
+                <td className="pb-0.5 font-bold uppercase">
+                  {activeSiswa?.nama}
+                </td>
               </tr>
               <tr>
                 <td className="pb-0.5">Kelas</td>
                 <td className="pb-0.5 text-center">:</td>
-                <td className="pb-0.5">{activeSiswa?.kelas}</td>
+                <td className="pb-0.5 uppercase">{activeSiswa?.kelas}</td>
               </tr>
               <tr>
-                <td className="pb-0.5">Tahun</td>
+                <td className="pb-0.5">Jenis Ujian</td>
                 <td className="pb-0.5 text-center">:</td>
-                <td className="pb-0.5">{tahunAjar}</td>
+                <td className="pb-0.5 font-bold">
+                  {kisiData?.jenis_ujian || "Ujian Tertulis"}
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* PARAGRAF PENGANTAR - mb-6 diubah jadi mb-4 */}
+        {/* PARAGRAF PENGANTAR */}
         <p className="text-justify mb-4 leading-relaxed indent-8 text-sm md:text-base">
-          Yth. Ayah/Bunda <span className="font-bold">{activeSiswa?.nama}</span>
-          , merupakan sebuah kebahagiaan bagi saya dapat mendampingi ananda{" "}
-          <span className="font-bold">{activeSiswa?.nama}</span> di kelas.
-          Izinkan saya menyampaikan catatan singkat mengenai keseharian ananda,
-          sebagai bentuk perhatian kami terhadap tumbuh kembangnya.
+          Bersama ini kami sampaikan kisi-kisi dan materi pokok yang akan
+          diujikan kepada ananda{" "}
+          <span className="font-bold">{activeSiswa?.nama}</span>. Kami mohon
+          bantuan Ayah/Bunda untuk turut serta mendampingi dan memantau proses
+          belajar ananda di rumah agar mendapatkan hasil yang maksimal.
         </p>
 
-        {/* TABEL JURNAL - mb-12 diubah jadi mb-6 */}
+        {/* TABEL KISI-KISI */}
         <table className="w-full border-collapse border border-black mb-6 text-sm md:text-base">
           <thead>
-            {/* Header dengan warna hijau telur asin (Teal) */}
             <tr className="bg-teal-100">
               <th className="border border-black py-2 px-3 w-12 text-center">
                 No.
               </th>
-              <th className="border border-black py-2 px-3 w-40 md:w-48 text-center">
-                Kategori
+              <th className="border border-black py-2 px-3 w-48 text-center">
+                Mata Pelajaran
               </th>
               <th className="border border-black py-2 px-3 text-center">
-                Catatan
+                Materi Pokok / Indikator
               </th>
             </tr>
           </thead>
           <tbody className="align-top">
-            {/* Padding td p-3 diubah menjadi py-2 px-3, min-h disesuaikan */}
             <tr>
               <td className="border border-black py-2 px-3 text-center align-middle">
                 1
               </td>
               <td className="border border-black py-2 px-3 font-semibold text-center align-middle">
-                Potensi
+                {kisiData?.mata_pelajaran || "-"}
               </td>
-              <td className="border border-black py-2 px-3 text-justify min-h-[60px]">
-                {jurnalData?.potensi || "-"}
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-black py-2 px-3 text-center align-middle">
-                2
-              </td>
-              <td className="border border-black py-2 px-3 font-semibold text-center align-middle">
-                Catatan Observasi
-              </td>
-              <td className="border border-black py-2 px-3 text-justify min-h-[80px]">
-                {jurnalData?.catatan_observasi || "-"}
-              </td>
-            </tr>
-            <tr>
-              <td className="border border-black py-2 px-3 text-center align-middle">
-                3
-              </td>
-              <td className="border border-black py-2 px-3 font-semibold text-center align-middle">
-                Rekomendasi
-              </td>
-              <td className="border border-black py-2 px-3 text-justify min-h-[60px]">
-                {jurnalData?.rekomendasi || "-"}
+              <td className="border border-black py-2 px-3 text-justify min-h-[150px]">
+                {kisiData?.materi || "Belum ada materi pokok yang diinput."}
               </td>
             </tr>
           </tbody>
@@ -145,7 +125,7 @@ export default function JurnalPrint({ activeSiswa, jurnalData, closeModal }) {
         {/* TANDA TANGAN */}
         <div className="flex justify-end pr-4 md:pr-12 text-sm md:text-base">
           <div className="flex flex-col items-center text-center">
-            <p className="mb-0">Guru Damping Kelas,</p>
+            <p className="mb-0">Guru Pengampu,</p>
             <div className="w-24 h-12 md:w-32 md:h-16 flex items-center justify-center overflow-hidden my-0">
               <img
                 src="/assets/ttd.svg"
@@ -165,13 +145,7 @@ export default function JurnalPrint({ activeSiswa, jurnalData, closeModal }) {
           __html: `
         @media print {
           @page { size: auto; margin: 2.54cm; }
-          #jurnal-print-area { 
-            width: 100% !important; 
-            max-width: none !important; 
-            margin: 0 !important; 
-            padding: 0 !important; 
-            box-shadow: none !important; 
-          }
+          #kisi-print-area { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
       `,
