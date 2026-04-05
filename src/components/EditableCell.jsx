@@ -31,15 +31,24 @@ export default function EditableCell({
       const initialRows = (value || "")
         .split("\n")
         .filter((r) => r.trim() !== "")
-        .map((r) => {
+        .map((r, idx) => {
+          // Logika baru: membaca 3 bagian (Jenis:::Nomor:::Teks)
           if (r.includes(":::")) {
-            const [jenis, ...teks] = r.split(":::");
-            return { jenis, teks: teks.join(":::") };
+            const parts = r.split(":::");
+            if (parts.length >= 3)
+              return {
+                jenis: parts[0],
+                no: parts[1],
+                teks: parts.slice(2).join(":::"),
+              };
+            return { jenis: parts[0], no: String(idx + 1), teks: parts[1] };
           }
-          return { jenis: "PG", teks: r };
+          return { jenis: "PG", no: String(idx + 1), teks: r };
         });
       setRows(
-        initialRows.length > 0 ? initialRows : [{ jenis: "PG", teks: "" }],
+        initialRows.length > 0
+          ? initialRows
+          : [{ jenis: "PG", no: "1", teks: "" }],
       );
     }
   }, [value, type]);
@@ -47,9 +56,10 @@ export default function EditableCell({
   const triggerSave = () => {
     setIsEditing(false);
     if (type === "kisi_editor") {
+      // Menyimpan 3 bagian
       const finalVal = rows
         .filter((r) => r.teks.trim() !== "")
-        .map((r) => `${r.jenis}:::${r.teks}`)
+        .map((r) => `${r.jenis}:::${r.no}:::${r.teks}`)
         .join("\n");
       onSave(finalVal);
     } else {
@@ -65,7 +75,7 @@ export default function EditableCell({
     if (type === "kisi_editor") {
       return (
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:hidden">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden border border-slate-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[85vh] overflow-hidden border border-slate-200">
             <div className="p-4 border-b bg-slate-50 flex justify-between items-center">
               <h3 className="font-black text-slate-700 uppercase text-xs tracking-widest">
                 Kelola Baris Kisi-Kisi
@@ -90,12 +100,24 @@ export default function EditableCell({
                       newRows[idx].jenis = e.target.value;
                       setRows(newRows);
                     }}
-                    className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-[11px] font-bold text-teal-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                    className="p-2 border border-slate-200 rounded-lg bg-slate-50 text-[11px] font-bold text-teal-700 outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer w-20"
                   >
                     <option value="PG">PG</option>
                     <option value="Essay">Essay</option>
                     <option value="Uraian">Uraian</option>
                   </select>
+                  {/* INPUT BARU UNTUK NOMOR SOAL */}
+                  <input
+                    type="text"
+                    value={row.no}
+                    placeholder="No"
+                    onChange={(e) => {
+                      const newRows = [...rows];
+                      newRows[idx].no = e.target.value;
+                      setRows(newRows);
+                    }}
+                    className="p-2 border border-slate-200 rounded-lg text-xs font-bold text-center outline-none focus:ring-2 focus:ring-teal-500 w-16"
+                  />
                   <textarea
                     autoFocus={idx === rows.length - 1}
                     value={row.teks}
@@ -116,7 +138,12 @@ export default function EditableCell({
                 </div>
               ))}
               <button
-                onClick={() => setRows([...rows, { jenis: "PG", teks: "" }])}
+                onClick={() =>
+                  setRows([
+                    ...rows,
+                    { jenis: "PG", no: String(rows.length + 1), teks: "" },
+                  ])
+                }
                 className="w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:border-teal-500 hover:text-teal-600 hover:bg-teal-50 transition-all"
               >
                 <Plus size={16} /> Tambah Baris Baru
@@ -177,7 +204,13 @@ export default function EditableCell({
   if (type === "kisi_editor" && value) {
     displayValue = (value || "")
       .split("\n")
-      .map((r) => (r.includes(":::") ? r.split(":::")[1] : r))
+      .map((r) =>
+        r.includes(":::")
+          ? r.split(":::").length >= 3
+            ? r.split(":::")[2]
+            : r.split(":::")[1]
+          : r,
+      )
       .join("\n");
   }
   if (isCurrency && value) displayValue = formatRp(value);

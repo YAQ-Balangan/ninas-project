@@ -11,18 +11,32 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
     ? rawKelas.replace(/kelas/i, "").trim()
     : rawKelas;
 
-  // Logika Pemecah Baris (Smart Parser) menggunakan :::
+  // LOGIKA DINAMIS: Judul dan Semester mengikuti tulisan di kolom "Jenis Ujian"
+  const judulUjian = (
+    kisiData?.jenis_ujian || "SUMATIF AKHIR SEMESTER I"
+  ).toUpperCase();
+  const isSemester2 = judulUjian.match(/\b(II|2|GENAP)\b/i);
+  const strSemester = isSemester2 ? "II" : "I";
+
+  // Logika Pemecah Baris 3 Segmen (Jenis:::Nomor:::Teks)
   const barisData = (kisiData?.materi || "")
     .split("\n")
     .filter((b) => b.trim() !== "");
 
   const listSoal = barisData.map((baris, index) => {
-    const adaPilihan = baris.includes(":::");
-    return {
-      no: index + 1,
-      jenis: adaPilihan ? baris.split(":::")[0] : "PG",
-      teks: adaPilihan ? baris.split(":::")[1] : baris,
-    };
+    const parts = baris.split(":::");
+    let jenis = "PG",
+      no = index + 1,
+      teks = baris;
+    if (parts.length >= 3) {
+      jenis = parts[0];
+      no = parts[1];
+      teks = parts.slice(2).join(":::");
+    } else if (parts.length === 2) {
+      jenis = parts[0];
+      teks = parts[1];
+    }
+    return { no, jenis, teks };
   });
 
   return (
@@ -30,18 +44,17 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
       id="kisi-print-area"
       className="hidden print:block w-full max-w-none mx-auto bg-white text-black font-serif p-2"
     >
-      {/* Judul Cetak - SAS I */}
-      <div className="text-center font-bold mb-6">
-        <h1 className="text-[15px] uppercase tracking-wide leading-none">
-          KISI – KISI SOAL SUMATIF AKHIR SEMESTER I
+      {/* Judul Cetak Dinamis */}
+      <div className="text-center font-bold mb-4">
+        <h1 className="text-[14px] uppercase tracking-wide leading-none">
+          KISI – KISI SOAL {judulUjian}
         </h1>
-        <h2 className="text-[15px] uppercase tracking-wide mt-1">
+        <h2 className="text-[14px] uppercase tracking-wide mt-1">
           TAHUN PELAJARAN {tahunAjar}
         </h2>
       </div>
 
-      {/* Identitas Cetak - Lebar Label Diperkecil agar ":" lebih dekat */}
-      <div className="flex justify-between font-bold text-[11px] mb-3 border-b-0">
+      <div className="flex justify-between font-bold text-[11px] mb-2 border-b-0">
         <div className="space-y-0.5">
           <div className="flex whitespace-nowrap">
             <span className="w-32">NAMA SEKOLAH</span>
@@ -58,7 +71,10 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
           <div className="flex whitespace-nowrap">
             <span className="w-28">KELAS/SEMESTER</span>
             <span className="px-1">:</span>
-            <span className="capitalize">{displayKelas}/1</span>
+            {/* Semester Otomatis */}
+            <span className="capitalize">
+              {displayKelas}/{strSemester}
+            </span>
           </div>
           <div className="flex whitespace-nowrap">
             <span className="w-28">NAMA PENGAJAR</span>
@@ -68,31 +84,30 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
         </div>
       </div>
 
-      {/* Tabel Rincian Soal */}
-      <table className="w-full border-collapse border border-black mb-4">
+      <table className="w-full border-collapse border border-black mb-3">
         <thead>
           <tr className="bg-gray-50">
-            <th className="border border-black py-1.5 px-2 text-center uppercase text-[10px] w-[65%]">
-              CAPAIAN PEMBELAJARAN
+            <th className="border border-black py-1 px-2 text-center uppercase text-[10px] w-[65%]">
+              MATERI POKOK/INDIKATOR
             </th>
-            <th className="border border-black py-1.5 px-2 w-16 text-center uppercase text-[10px]">
+            <th className="border border-black py-1 px-2 w-16 text-center uppercase text-[10px]">
               NO.SOAL
             </th>
-            <th className="border border-black py-1.5 px-2 w-28 text-center uppercase text-[10px]">
+            <th className="border border-black py-1 px-2 w-28 text-center uppercase text-[10px]">
               BENTUK SOAL
             </th>
           </tr>
         </thead>
-        <tbody className="align-top font-sans text-[11px]">
-          {listSoal.map((item) => (
-            <tr key={item.no}>
-              <td className="border border-black py-1.5 px-2 text-justify leading-normal">
+        <tbody className="align-top font-sans text-[11px] leading-tight">
+          {listSoal.map((item, i) => (
+            <tr key={i}>
+              <td className="border border-black py-0.5 px-2 text-justify">
                 {item.teks}
               </td>
-              <td className="border border-black py-1.5 px-2 text-center font-semibold">
+              <td className="border border-black py-0.5 px-2 text-center font-semibold align-middle">
                 {item.no}
               </td>
-              <td className="border border-black py-1.5 px-2 text-center font-bold">
+              <td className="border border-black py-0.5 px-2 text-center font-bold align-middle">
                 {item.jenis}
               </td>
             </tr>
@@ -100,17 +115,10 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
         </tbody>
       </table>
 
-      {/* Catatan Bawah */}
-      <div className="text-[10px] font-bold whitespace-nowrap italic">
-        CATATAN: Untuk referensi soal bisa dilihat di soal Latihan kita kemaren
-      </div>
-
+      <div className="text-[10px] font-bold whitespace-nowrap">CATATAN:</div>
       <style
         dangerouslySetInnerHTML={{
-          __html: `@media print { 
-            @page { size: auto; margin: 1.5cm; } 
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } 
-          }`,
+          __html: `@media print { @page { size: auto; margin: 1.5cm; } * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; } }`,
         }}
       />
     </div>

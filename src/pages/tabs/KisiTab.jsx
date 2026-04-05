@@ -30,7 +30,7 @@ export default function KisiTab({
                 Mata Pelajaran
               </th>
               <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-28">
-                Jenis Ujian
+                Judul
               </th>
               <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest">
                 Materi Pokok / Indikator
@@ -85,17 +85,12 @@ export default function KisiTab({
                   </td>
                   <td className="px-2 py-1.5 text-[10px] md:text-[11px] text-center">
                     <EditableCell
-                      type="select"
-                      options={[
-                        "Ulangan Harian",
-                        "UTS",
-                        "UAS",
-                        "Ujian Praktik",
-                      ]}
-                      value={k.jenis_ujian || "UAS"}
+                      type="text"
+                      value={k.jenis_ujian}
                       onSave={(val) =>
                         handleInlineKisi(k.id, "jenis_ujian", val)
                       }
+                      placeholder="Cth: SUMATIF AKHIR SEMESTER II"
                     />
                   </td>
                   <td className="px-3 py-1.5 text-[10px] md:text-[11px] leading-snug">
@@ -193,23 +188,19 @@ export default function KisiTab({
                     </div>
                   </div>
                 </div>
+                {/* 👇 PERUBAHAN DI SINI: Jenis Ujian menjadi Teks Bebas di Mobile 👇 */}
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
                     Jenis Ujian
                   </span>
                   <div className="text-sm text-slate-700">
                     <EditableCell
-                      type="select"
-                      options={[
-                        "Ulangan Harian",
-                        "UTS",
-                        "UAS",
-                        "Ujian Praktik",
-                      ]}
-                      value={k.jenis_ujian || "UAS"}
+                      type="text"
+                      value={k.jenis_ujian}
                       onSave={(val) =>
                         handleInlineKisi(k.id, "jenis_ujian", val)
                       }
+                      placeholder="Cth: SUMATIF AKHIR SEMESTER II"
                     />
                   </div>
                 </div>
@@ -218,7 +209,6 @@ export default function KisiTab({
                     Materi Pokok / Indikator
                   </span>
                   <div className="text-sm text-slate-700">
-                    {/* 👇 PERUBAHAN DI SINI: Samakan dengan desktop 👇 */}
                     <EditableCell
                       type="kisi_editor"
                       value={k.materi}
