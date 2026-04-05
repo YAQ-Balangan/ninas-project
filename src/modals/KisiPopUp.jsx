@@ -1,3 +1,4 @@
+// File: src/modals/KisiPopUp.jsx
 import React from "react";
 import { X, Printer } from "lucide-react";
 
@@ -16,6 +17,7 @@ export default function KisiPopUp({ activeSiswa, kisiData, closeModal }) {
   const barisData = (kisiData?.materi || "")
     .split("\n")
     .filter((b) => b.trim() !== "");
+
   const listSoal = barisData.map((baris, index) => {
     const adaPilihan = baris.includes(":::");
     return {
@@ -33,89 +35,99 @@ export default function KisiPopUp({ activeSiswa, kisiData, closeModal }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/90 backdrop-blur-sm overflow-y-auto p-4 md:p-8 animate-in fade-in duration-300 print:hidden">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/90 backdrop-blur-sm overflow-y-auto p-2 sm:p-4 md:p-8 animate-in fade-in duration-300 print:hidden">
       {/* Tombol Aksi */}
       <div className="fixed top-4 right-4 flex gap-2 z-50">
         <button
           onClick={handlePrint}
-          className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold tracking-widest uppercase rounded-lg shadow-lg flex items-center gap-2 transition-all"
+          className="px-3 py-1.5 md:px-4 md:py-2 bg-teal-500 hover:bg-teal-600 text-white font-bold tracking-widest uppercase rounded-lg shadow-lg flex items-center gap-1.5 md:gap-2 text-[10px] md:text-[12px] transition-all"
         >
-          <Printer size={16} /> Cetak
+          <Printer size={16} className="w-4 h-4 md:w-5 md:h-5" /> Cetak
         </button>
         <button
           onClick={closeModal}
-          className="p-2 bg-white/10 text-white hover:bg-rose-500 border border-white/20 rounded-lg shadow-lg transition-all"
+          className="p-1.5 md:p-2 bg-white/10 text-white hover:bg-rose-500 border border-white/20 rounded-lg shadow-lg transition-all"
         >
-          <X size={20} />
+          <X size={20} className="w-4 h-4 md:w-5 md:h-5" />
         </button>
       </div>
 
       {/* Wadah Kertas Preview */}
-      <div className="w-full max-w-4xl bg-white shadow-2xl mx-auto p-10 mt-12 text-black font-serif">
-        {/* Header Judul */}
-        <div className="text-center font-bold mb-6">
-          <h1 className="text-[16px] uppercase tracking-wider leading-none">
+      <div className="w-full max-w-5xl bg-white shadow-2xl mx-auto p-3 sm:p-6 md:p-10 mt-14 md:mt-12 text-black font-serif overflow-hidden">
+        {/* Header Judul - Mengecil di Mobile agar tidak turun baris */}
+        <div className="text-center font-bold mb-4 md:mb-8">
+          <h1 className="text-[9px] min-[375px]:text-[10px] sm:text-[14px] md:text-[18px] uppercase tracking-wide md:tracking-wider leading-none whitespace-nowrap">
             KISI – KISI SOAL SUMATIF AKHIR SEMESTER I
           </h1>
-          <h2 className="text-[16px] uppercase tracking-wider mt-1">
+          <h2 className="text-[9px] min-[375px]:text-[10px] sm:text-[14px] md:text-[18px] uppercase tracking-wide md:tracking-wider mt-1 whitespace-nowrap">
             TAHUN PELAJARAN {tahunAjar}
           </h2>
         </div>
 
-        {/* Identitas - Dipaksa Satu Baris (No Wrap) */}
-        <div className="flex justify-between font-bold text-[13px] mb-4 border-b-0">
-          <div className="space-y-0.5">
+        {/* Identitas - Dibagi Area 55% dan 45% agar tidak saling tabrak */}
+        <div className="flex justify-between font-bold text-[6px] min-[375px]:text-[7px] sm:text-[10px] md:text-[13px] mb-3 md:mb-6 w-full">
+          {/* Kolom Kiri */}
+          <div className="w-[55%] space-y-0.5 md:space-y-1 pr-1">
             <div className="flex whitespace-nowrap">
-              <span className="w-40">NAMA SEKOLAH</span>
-              <span className="px-2">:</span>
-              <span>SD ISLAM AL-ISTIQOMAH</span>
+              <span className="w-[60px] min-[375px]:w-[70px] sm:w-[100px] md:w-36 shrink-0">
+                NAMA SEKOLAH
+              </span>
+              <span className="px-0.5 md:px-2 shrink-0">:</span>
+              <span className="capitalize">SD Islam Al-Istiqomah</span>
             </div>
             <div className="flex whitespace-nowrap">
-              <span className="w-40">MATA PELAJARAN</span>
-              <span className="px-2">:</span>
-              <span>{mapel}</span>
+              <span className="w-[60px] min-[375px]:w-[70px] sm:w-[100px] md:w-36 shrink-0">
+                MATA PELAJARAN
+              </span>
+              <span className="px-0.5 md:px-2 shrink-0">:</span>
+              <span className="capitalize">{mapel}</span>
             </div>
           </div>
-          <div className="space-y-0.5 text-left">
+          {/* Kolom Kanan */}
+          <div className="w-[45%] space-y-0.5 md:space-y-1 text-left pl-1">
             <div className="flex whitespace-nowrap">
-              <span className="w-36">KELAS/SEMESTER</span>
-              <span className="px-2">:</span>
-              <span>{displayKelas}/1</span>
+              <span className="w-[65px] min-[375px]:w-[75px] sm:w-[100px] md:w-32 shrink-0">
+                KELAS/SEMESTER
+              </span>
+              <span className="px-0.5 md:px-2 shrink-0">:</span>
+              <span className="capitalize">{displayKelas}/1</span>
             </div>
             <div className="flex whitespace-nowrap">
-              <span className="w-36">NAMA PENGAJAR</span>
-              <span className="px-2">:</span>
-              <span>Nina Rahilah, S.Pd.</span>
+              <span className="w-[65px] min-[375px]:w-[75px] sm:w-[100px] md:w-32 shrink-0">
+                NAMA PENGAJAR
+              </span>
+              <span className="px-0.5 md:px-2 shrink-0">:</span>
+              <span className="capitalize">Nina Rahilah, S.Pd.</span>
             </div>
           </div>
         </div>
 
-        {/* Tabel Utama */}
-        <table className="w-full border-collapse border border-black mb-4">
-          <thead>
-            <tr className="bg-slate-50">
-              <th className="border border-black py-2 px-3 text-center uppercase text-[12px] w-[65%]">
+        {/* Tabel Utama Rincian Soal */}
+        <table className="w-full border-collapse border border-black mb-4 md:mb-6">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="border border-black py-1.5 md:py-3 px-1.5 md:px-3 text-center uppercase text-[7px] sm:text-[10px] md:text-[13px] w-[65%]">
                 CAPAIAN PEMBELAJARAN
               </th>
-              <th className="border border-black py-2 px-3 w-20 text-center uppercase text-[12px]">
+              <th className="border border-black py-1.5 md:py-3 px-1 md:px-3 w-10 sm:w-16 md:w-20 text-center uppercase text-[7px] sm:text-[10px] md:text-[13px]">
                 NO.SOAL
               </th>
-              <th className="border border-black py-2 px-3 w-32 text-center uppercase text-[12px]">
+              <th className="border border-black py-1.5 md:py-3 px-1 md:px-3 w-16 sm:w-24 md:w-32 text-center uppercase text-[7px] sm:text-[10px] md:text-[13px]">
                 BENTUK SOAL
               </th>
             </tr>
           </thead>
-          <tbody className="align-top font-sans text-[12px]">
+          <tbody className="align-top font-sans text-[7px] sm:text-[10px] md:text-[13px]">
             {listSoal.length > 0 ? (
               listSoal.map((item) => (
                 <tr key={item.no}>
-                  <td className="border border-black py-2 px-3 text-justify leading-relaxed">
+                  <td className="border border-black py-1.5 md:py-2.5 px-1.5 md:px-4 text-justify leading-snug md:leading-relaxed">
                     {item.teks}
                   </td>
-                  <td className="border border-black py-2 px-3 text-center font-semibold">
+                  <td className="border border-black py-1.5 md:py-2.5 px-1 md:px-3 text-center font-semibold">
                     {item.no}
                   </td>
-                  <td className="border border-black py-2 px-3 text-center font-bold">
+                  <td className="border border-black py-1.5 md:py-2.5 px-1 md:px-3 text-center font-bold">
                     {item.jenis}
                   </td>
                 </tr>
@@ -124,7 +136,7 @@ export default function KisiPopUp({ activeSiswa, kisiData, closeModal }) {
               <tr>
                 <td
                   colSpan="3"
-                  className="border border-black py-10 text-center italic text-slate-400"
+                  className="border border-black py-6 md:py-12 text-center italic text-slate-400"
                 >
                   Belum ada rincian soal yang diinput.
                 </td>
@@ -134,7 +146,7 @@ export default function KisiPopUp({ activeSiswa, kisiData, closeModal }) {
         </table>
 
         {/* Catatan Bawah */}
-        <div className="text-[12px] font-bold uppercase whitespace-nowrap">
+        <div className="text-[6px] min-[375px]:text-[7px] sm:text-[10px] md:text-[13px] font-bold whitespace-nowrap italic tracking-tighter md:tracking-normal">
           CATATAN: Untuk referensi soal bisa dilihat di soal Latihan kita
           kemaren
         </div>

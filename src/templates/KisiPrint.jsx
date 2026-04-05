@@ -46,24 +46,24 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
           <div className="flex whitespace-nowrap">
             <span className="w-32">NAMA SEKOLAH</span>
             <span className="px-1">:</span>
-            <span className="uppercase">SD ISLAM AL-ISTIQOMAH</span>
+            <span className="capitalize">SD Islam Al-Istiqomah</span>
           </div>
           <div className="flex whitespace-nowrap">
             <span className="w-32">MATA PELAJARAN</span>
             <span className="px-1">:</span>
-            <span className="uppercase">{mapel}</span>
+            <span className="capitalize">{mapel}</span>
           </div>
         </div>
         <div className="space-y-0.5 text-left">
           <div className="flex whitespace-nowrap">
             <span className="w-28">KELAS/SEMESTER</span>
             <span className="px-1">:</span>
-            <span className="uppercase">{displayKelas}/1</span>
+            <span className="capitalize">{displayKelas}/1</span>
           </div>
           <div className="flex whitespace-nowrap">
             <span className="w-28">NAMA PENGAJAR</span>
             <span className="px-1">:</span>
-            <span className="uppercase">Nina Rahilah, S.Pd.</span>
+            <span className="capitalize">Nina Rahilah, S.Pd.</span>
           </div>
         </div>
       </div>
@@ -101,7 +101,7 @@ export default function KisiPrint({ activeSiswa, kisiData }) {
       </table>
 
       {/* Catatan Bawah */}
-      <div className="text-[10px] font-bold uppercase whitespace-nowrap italic">
+      <div className="text-[10px] font-bold whitespace-nowrap italic">
         CATATAN: Untuk referensi soal bisa dilihat di soal Latihan kita kemaren
       </div>
 

@@ -98,7 +98,6 @@ export default function KisiTab({
                       }
                     />
                   </td>
-                  {/* 👇 BAGIAN YANG DIUBAH UNTUK TAMPILAN DESKTOP 👇 */}
                   <td className="px-3 py-1.5 text-[10px] md:text-[11px] leading-snug">
                     <EditableCell
                       type="kisi_editor"
@@ -132,7 +131,7 @@ export default function KisiTab({
         </table>
       </div>
 
-      {/* TAMPILAN MOBILE (TETAP) */}
+      {/* TAMPILAN MOBILE */}
       <div className="md:hidden print:hidden flex flex-col gap-4 p-3 bg-slate-50/50">
         {filteredKisi.length === 0 ? (
           <div className="py-10 text-center text-slate-400 font-semibold text-sm bg-white rounded-xl border border-slate-200">
@@ -214,17 +213,17 @@ export default function KisiTab({
                     />
                   </div>
                 </div>
-                {/* 👇 BAGIAN YANG DIUBAH UNTUK TAMPILAN MOBILE 👇 */}
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mb-1">
                     Materi Pokok / Indikator
                   </span>
                   <div className="text-sm text-slate-700">
+                    {/* 👇 PERUBAHAN DI SINI: Samakan dengan desktop 👇 */}
                     <EditableCell
-                      type="textarea" // <--- Menambahkan type="textarea"
+                      type="kisi_editor"
                       value={k.materi}
                       onSave={(val) => handleInlineKisi(k.id, "materi", val)}
-                      placeholder="Ketik capaian, tekan Enter untuk baris baru..."
+                      placeholder="Klik untuk mengelola baris soal..."
                     />
                   </div>
                 </div>
