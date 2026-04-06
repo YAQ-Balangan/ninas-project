@@ -270,8 +270,8 @@ export default function NinaProjectApp() {
     const payload = {
       kelas: kelasOptions[0] || "VII",
       tahun: `${currentYear}/${parseInt(currentYear) + 1}`,
-      mata_pelajaran: "Nama Mapel",
-      jenis_ujian: "UAS",
+      mata_pelajaran: "Bahasa Arab",
+      jenis_ujian: "Sumatif Akhir Semester II",
       materi: "Materi pokok...",
     };
     try {

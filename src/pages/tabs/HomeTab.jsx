@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import {
   TrendingUp,
   RefreshCw,
@@ -23,64 +24,118 @@ export default function HomeTab({
 }) {
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-      <div className="bg-gradient-to-br from-teal-500/95 to-emerald-700/95 backdrop-blur-xl rounded-3xl p-5 md:p-8 text-white shadow-[0_20px_40px_rgba(20,184,166,0.2)] border border-white/20 relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-900/20 rounded-full blur-3xl"></div>
+      <style>{`
+        @keyframes gradientBG {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .colorful-glow-bg {
+          /* Dominan Teal cerah, dicampur sedikit Emerald dan Indigo terang */
+          background: linear-gradient(
+            -45deg, 
+            #2dd4bf, /* teal-400 */
+            #14b8a6, /* teal-500 */
+            #34d399, /* emerald-400 */
+            #818cf8, /* indigo-400 */
+            #2dd4bf  /* kembali ke teal-400 */
+          );
+          background-size: 500% 500%;
+          animation: gradientBG 15s ease infinite;
+        }
+      `}</style>
+
+      {/* Container Utama dengan Background Animasi Terang */}
+      <div className="colorful-glow-bg backdrop-blur-xl rounded-3xl p-5 md:p-8 text-white shadow-[0_20px_40px_rgba(20,184,166,0.3)] border border-white/40 relative overflow-hidden z-0">
+        {/* Cahaya 1: Campuran Rose & Amber (Sangat Cerah) */}
+        <motion.div
+          animate={{
+            x: [0, 60, -30, 0],
+            y: [0, -40, 50, 0],
+            rotate: [0, 180, 360],
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-24 -right-10 w-72 h-72 bg-gradient-to-br from-rose-300/50 to-amber-300/50 rounded-[40%] blur-3xl -z-10"
+        />
+
+        {/* Cahaya 2: Campuran Indigo & Putih (Menerangi bagian bawah) */}
+        <motion.div
+          animate={{
+            x: [0, -50, 40, 0],
+            y: [0, 60, -20, 0],
+            rotate: [360, 180, 0],
+          }}
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-24 -left-10 w-80 h-80 bg-gradient-to-tr from-indigo-300/50 to-white/40 rounded-[35%] blur-3xl -z-10"
+        />
+
+        {/* Cahaya 3: Campuran Emerald & Teal Muda (Mengapung di tengah) */}
+        <motion.div
+          animate={{
+            x: [0, 40, -40, 0],
+            y: [0, 30, -30, 0],
+            rotate: [0, -180, -360],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute top-10 left-1/3 w-64 h-64 bg-gradient-to-b from-emerald-300/50 to-teal-200/50 rounded-[50%] blur-3xl -z-10"
+        />
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-8 relative z-10">
           <div>
-            <p className="text-teal-100 text-xs md:text-sm font-medium mb-1 flex items-center gap-2 tracking-wide uppercase">
+            <p className="text-white/90 text-xs md:text-sm font-bold mb-1 flex items-center gap-2 tracking-wide uppercase drop-shadow-sm">
               <TrendingUp size={16} /> Grand Total Dana
               {isSyncing && (
                 <RefreshCw
                   size={12}
-                  className="animate-spin text-teal-200 ml-2"
+                  className="animate-spin text-white ml-2"
                   title="Menyinkronkan..."
                 />
               )}
             </p>
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-md">
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-md text-white">
               {formatRp(grandTotalKeuangan)}
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
-            <div className="bg-white/10 p-3 md:p-4 rounded-2xl border border-white/20 backdrop-blur-md shadow-inner">
-              <p className="text-teal-100 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
+            <div className="bg-white/20 p-3 md:p-4 rounded-2xl border border-white/40 backdrop-blur-md shadow-inner">
+              <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
                 Total Cash
               </p>
-              <p className="text-base md:text-xl font-bold text-white tracking-wide">
+              <p className="text-base md:text-xl font-bold text-white tracking-wide drop-shadow-sm">
                 {formatRp(totalCash)}
               </p>
             </div>
-            <div className="bg-white/10 p-3 md:p-4 rounded-2xl border border-white/20 backdrop-blur-md shadow-inner">
-              <p className="text-teal-100 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
+            <div className="bg-white/20 p-3 md:p-4 rounded-2xl border border-white/40 backdrop-blur-md shadow-inner">
+              <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
                 Total Transfer
               </p>
-              <p className="text-base md:text-xl font-bold text-white tracking-wide">
+              <p className="text-base md:text-xl font-bold text-white tracking-wide drop-shadow-sm">
                 {formatRp(totalTransfer)}
               </p>
             </div>
           </div>
         </div>
-        <div className="flex gap-6 border-t border-teal-400/30 pt-4 mt-5 relative z-10">
+        <div className="flex gap-6 border-t border-white/40 pt-4 mt-5 relative z-10">
           <div>
-            <p className="text-teal-100 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
+            <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
               Jumlah Anak
             </p>
-            <p className="text-sm md:text-base font-bold">
+            <p className="text-sm md:text-base font-bold text-white drop-shadow-sm">
               {siswaData.length} Siswa
             </p>
           </div>
           <div>
-            <p className="text-teal-100 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
+            <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
               Kategori Kelas
             </p>
-            <p className="text-sm md:text-base font-bold">
+            <p className="text-sm md:text-base font-bold text-white drop-shadow-sm">
               {kelasOptions.length} Tingkat
             </p>
           </div>
         </div>
       </div>
 
+      {/* Bagian Bawah Tetap Sama */}
       <div>
         <h3 className="text-[11px] md:text-sm text-slate-500 font-bold uppercase tracking-[0.2em] mb-4 pl-2">
           Menu Cepat

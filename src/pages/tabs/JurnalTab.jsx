@@ -71,7 +71,7 @@ export default function JurnalTab({
                       <EditableCell
                         value={j.tahun}
                         onSave={(val) => handleInlineJurnal(s.id, "tahun", val)}
-                        placeholder="25/26"
+                        placeholder="2025/2026"
                       />
                     </td>
                     <td className="px-3 py-1.5 text-[10px] md:text-[11px] leading-snug">
