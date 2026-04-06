@@ -1,36 +1,61 @@
-import React, { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  User,
-  MapPin,
   Calendar,
   BookOpen,
   GraduationCap,
-  Save,
   Plus,
   ArrowLeft,
   Check,
-  X,
+  RefreshCw,
+  Trash2,
+  Users,
 } from "lucide-react";
 
-export default function Absensi({ onBack }) {
-  const [activeTab, setActiveTab] = useState("kehadiran"); // 'kehadiran' | 'penilaian'
+const KELAS_OPTIONS = [
+  "Semua Kelas",
+  "X MIPA 1",
+  "X MIPA 2",
+  "X IPS 1",
+  "X IPS 2",
+  "VII",
+  "VIII",
+  "IX",
+];
 
-  // State Identitas & Settings (Bisa di-CRUD)
+const MAPEL_OPTIONS = [
+  "Semua Mapel",
+  "Al-Qur'an Hadis",
+  "Tilawah",
+  "Bahasa Arab",
+];
+
+export default function Absensi({ onBack }) {
+  const [activeTab, setActiveTab] = useState("kehadiran");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSaved, setLastSaved] = useState(new Date());
+
+  // State Identitas Dasar
   const [settings, setSettings] = useState({
     guru: "Ahmad Maulana",
-    alamat: "Jl. Pendidikan No. 1, Banjarmasin",
     semester: "Ganjil",
     tahunAjaran: "2025/2026",
-    kelas: "X MIPA 1",
-    mapel: "Pendidikan Agama Islam",
   });
 
-  // State Data Tabel (Dalam prakteknya, fetch dari Supabase di useEffect)
+  // State DUAL FILTER
+  const [filterKelas, setFilterKelas] = useState("Semua Kelas");
+  const [filterMapel, setFilterMapel] = useState("Semua Mapel");
+
+  // State Tanggal Pertemuan (Bisa di-fetch/save bareng pengaturan kelas di Supabase)
+  const [meetingDates, setMeetingDates] = useState(Array(18).fill(""));
+
+  // Data Tabel (Ditambah properti mapel per siswa)
   const [students, setStudents] = useState([
     {
       id: 1,
       nama_siswa: "Aditya Pratama",
+      kelas: "X MIPA 1",
+      mapel: "Al-Qur'an Hadis",
       p1: "v",
       p2: "v",
       p3: "i",
@@ -42,6 +67,8 @@ export default function Absensi({ onBack }) {
     {
       id: 2,
       nama_siswa: "Bunga Lestari",
+      kelas: "X MIPA 2",
+      mapel: "Al-Qur'an Hadis",
       p1: "v",
       p2: "s",
       p3: "v",
@@ -50,27 +77,78 @@ export default function Absensi({ onBack }) {
       uh1: 88,
       um: 85,
     },
+    {
+      id: 3,
+      nama_siswa: "Cici Paramida",
+      kelas: "VII",
+      mapel: "Tilawah",
+      p1: "v",
+      p2: "v",
+      p3: "v",
+      t1: 85,
+      t2: 90,
+      uh1: 80,
+      um: 85,
+    },
   ]);
 
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Array Helper untuk Render Kolom
   const pertemuanCols = Array.from({ length: 18 }, (_, i) => `p${i + 1}`);
   const tugasCols = ["t1", "t2", "t3", "t4", "t5"];
   const uhCols = ["uh1", "uh2", "uh3"];
+
+  // ================= AUTO SAVE LOGIC ================= //
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsSyncing(true);
+      // TODO: Fungsi update ke Supabase (upsert students dan meetingDates)
+      setTimeout(() => {
+        setIsSyncing(false);
+        setLastSaved(new Date());
+      }, 1500);
+    }, 20000); // 20 detik
+
+    return () => clearInterval(interval);
+  }, [students, meetingDates]);
+
+  // ================= SMART FILTER LOGIC ================= //
+  const handleFilterKelasChange = (e) => {
+    const k = e.target.value;
+    setFilterKelas(k);
+
+    // Otomatis ubah Mapel mengikuti jenjang kelas
+    if (k === "VII" || k === "VIII" || k === "IX") {
+      setFilterMapel("Tilawah");
+    } else if (k.startsWith("X ")) {
+      setFilterMapel("Al-Qur'an Hadis");
+    } else if (k === "Semua Kelas") {
+      setFilterMapel("Semua Mapel");
+    }
+  };
+
+  const filteredStudents = useMemo(() => {
+    return students.filter((s) => {
+      const matchKelas =
+        filterKelas === "Semua Kelas" || s.kelas === filterKelas;
+      const matchMapel =
+        filterMapel === "Semua Mapel" || s.mapel === filterMapel;
+      return matchKelas && matchMapel;
+    });
+  }, [students, filterKelas, filterMapel]);
 
   // ================= CALCULATIONS ================= //
   const calculateAttendance = (student) => {
     let s = 0,
       i = 0,
-      a = 0;
+      a = 0,
+      t = 0;
     pertemuanCols.forEach((col) => {
       const val = (student[col] || "").toLowerCase();
       if (val === "s") s++;
       if (val === "i") i++;
       if (val === "a") a++;
+      if (val === "v") t++; // T untuk Total Hadir ('v')
     });
-    return { s, i, a };
+    return { s, i, a, t };
   };
 
   const calculateGrades = (student) => {
@@ -84,12 +162,8 @@ export default function Absensi({ onBack }) {
 
     const avgT = getAvg(tugasCols);
     const avgUH = getAvg(uhCols);
-
-    // Rata Harian (Rata-rata dari Tugas dan UH)
     const nh = (avgT + avgUH) / (avgT > 0 && avgUH > 0 ? 2 : 1);
     const um = parseFloat(student.um) || 0;
-
-    // Rumus: (nh + (2 * UM)) / 3
     const nr = (nh + 2 * um) / 3;
 
     return {
@@ -105,6 +179,12 @@ export default function Absensi({ onBack }) {
     setSettings((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleDateChange = (index, value) => {
+    const newDates = [...meetingDates];
+    newDates[index] = value;
+    setMeetingDates(newDates);
+  };
+
   const handleStudentChange = (id, field, value) => {
     setStudents((prev) =>
       prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)),
@@ -118,20 +198,32 @@ export default function Absensi({ onBack }) {
   };
 
   const addNewStudent = () => {
-    const newId = Date.now(); // Gunakan UUID/Supabase ID di produksi
-    setStudents([...students, { id: newId, nama_siswa: "Siswa Baru" }]);
+    const defaultKelas =
+      filterKelas !== "Semua Kelas" ? filterKelas : "X MIPA 1";
+    const defaultMapel =
+      filterMapel !== "Semua Mapel" ? filterMapel : "Al-Qur'an Hadis";
+
+    setStudents([
+      ...students,
+      {
+        id: Date.now(),
+        nama_siswa: "Siswa Baru",
+        kelas: defaultKelas,
+        mapel: defaultMapel,
+      },
+    ]);
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    // TODO: Pasang fungsi Supabase .upsert() ke tabel absensi_ahmad disini
-    setTimeout(() => {
-      setIsSaving(false);
-      alert("Data berhasil disimpan ke database!");
-    }, 800);
+  const deleteStudent = (id, nama) => {
+    if (
+      window.confirm(
+        `Hapus data siswa ${nama}? Data yang dihapus tidak bisa dikembalikan.`,
+      )
+    ) {
+      setStudents((prev) => prev.filter((s) => s.id !== id));
+    }
   };
 
-  // ================= RENDER HELPERS ================= //
   const renderAttendanceCell = (val) => {
     const v = (val || "").toLowerCase();
     if (v === "v")
@@ -143,57 +235,81 @@ export default function Absensi({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50 p-3 md:p-8 font-sans pb-24">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* HEADER / BANNER */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="bg-gradient-to-r from-teal-600 to-emerald-700 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden"
+          className="bg-gradient-to-r from-teal-600 to-emerald-700 rounded-3xl p-5 md:p-6 text-white shadow-xl relative overflow-hidden"
         >
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
 
-          <div className="flex justify-between items-start relative z-10">
-            <div className="space-y-4 w-full max-w-3xl">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={onBack}
-                  className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
-                >
-                  <ArrowLeft size={20} />
-                </button>
-                <h1 className="text-2xl md:text-3xl font-black tracking-tight drop-shadow-md">
-                  Panel Guru: {settings.guru}
-                </h1>
+          <div className="flex flex-col md:flex-row justify-between items-start relative z-10 gap-4">
+            <div className="space-y-4 w-full">
+              <div className="flex items-center justify-between md:justify-start gap-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={onBack}
+                    className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                  <h1 className="text-xl md:text-3xl font-black tracking-tight drop-shadow-md">
+                    Panel Guru
+                  </h1>
+                </div>
+                {/* Indikator Auto Save */}
+                <div className="flex items-center gap-2 px-3 py-1 bg-black/20 rounded-full text-[10px] md:text-xs font-bold border border-white/10">
+                  <RefreshCw
+                    size={12}
+                    className={
+                      isSyncing
+                        ? "animate-spin text-teal-300"
+                        : "text-slate-300"
+                    }
+                  />
+                  <span className="opacity-90 hidden sm:inline">
+                    {isSyncing
+                      ? "Menyinkronkan..."
+                      : `Tersimpan ${lastSaved.getHours()}:${String(lastSaved.getMinutes()).padStart(2, "0")}`}
+                  </span>
+                </div>
               </div>
 
               {/* Editable Settings Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-black/20 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 bg-black/20 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
                 <div>
                   <label className="text-[10px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
-                    <GraduationCap size={12} /> Kelas
+                    <Users size={12} /> Filter Kelas
                   </label>
-                  <input
-                    type="text"
-                    value={settings.kelas}
-                    onChange={(e) =>
-                      handleSettingChange("kelas", e.target.value)
-                    }
-                    className="w-full bg-transparent border-b border-teal-400/50 text-sm font-bold focus:outline-none focus:border-white transition-colors"
-                  />
+                  <select
+                    value={filterKelas}
+                    onChange={handleFilterKelasChange}
+                    className="w-full mt-1 bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-sm font-bold focus:outline-none focus:bg-white focus:text-teal-900 [&>option]:text-slate-800 transition-colors"
+                  >
+                    {KELAS_OPTIONS.map((k) => (
+                      <option key={k} value={k}>
+                        {k}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
-                    <BookOpen size={12} /> Mapel
+                    <BookOpen size={12} /> Filter Mapel
                   </label>
-                  <input
-                    type="text"
-                    value={settings.mapel}
-                    onChange={(e) =>
-                      handleSettingChange("mapel", e.target.value)
-                    }
-                    className="w-full bg-transparent border-b border-teal-400/50 text-sm font-bold focus:outline-none focus:border-white transition-colors"
-                  />
+                  <select
+                    value={filterMapel}
+                    onChange={(e) => setFilterMapel(e.target.value)}
+                    className="w-full mt-1 bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-sm font-bold focus:outline-none focus:bg-white focus:text-teal-900 [&>option]:text-slate-800 transition-colors"
+                  >
+                    {MAPEL_OPTIONS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
@@ -204,7 +320,7 @@ export default function Absensi({ onBack }) {
                     onChange={(e) =>
                       handleSettingChange("semester", e.target.value)
                     }
-                    className="w-full bg-transparent border-b border-teal-400/50 text-sm font-bold focus:outline-none focus:border-white [&>option]:text-slate-800 transition-colors"
+                    className="w-full mt-1 bg-transparent border-b border-teal-400/50 text-sm font-bold focus:outline-none focus:border-white [&>option]:text-slate-800 transition-colors"
                   >
                     <option value="Ganjil">Ganjil</option>
                     <option value="Genap">Genap</option>
@@ -220,98 +336,283 @@ export default function Absensi({ onBack }) {
                     onChange={(e) =>
                       handleSettingChange("tahunAjaran", e.target.value)
                     }
-                    className="w-full bg-transparent border-b border-teal-400/50 text-sm font-bold focus:outline-none focus:border-white transition-colors"
+                    className="w-full mt-1 bg-transparent border-b border-teal-400/50 text-sm font-bold focus:outline-none focus:border-white transition-colors"
                   />
                 </div>
               </div>
             </div>
-
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="hidden md:flex items-center gap-2 px-6 py-3 bg-white text-teal-700 font-black rounded-xl hover:scale-105 transition-all shadow-[0_10px_20px_rgba(0,0,0,0.1)]"
-            >
-              {isSaving ? (
-                <span className="animate-pulse">Menyimpan...</span>
-              ) : (
-                <>
-                  <Save size={18} /> Simpan Data
-                </>
-              )}
-            </button>
           </div>
         </motion.div>
 
         {/* TABS & CONTROLS */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-3">
+          <div className="flex w-full md:w-auto bg-white p-1.5 rounded-xl md:rounded-2xl shadow-sm border border-slate-200">
             <button
               onClick={() => setActiveTab("kehadiran")}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all ${activeTab === "kehadiran" ? "bg-teal-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"}`}
+              className={`flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase transition-all ${activeTab === "kehadiran" ? "bg-teal-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"}`}
             >
-              Absensi Kehadiran
+              Kehadiran
             </button>
             <button
               onClick={() => setActiveTab("penilaian")}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase transition-all ${activeTab === "penilaian" ? "bg-teal-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"}`}
+              className={`flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase transition-all ${activeTab === "penilaian" ? "bg-teal-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"}`}
             >
-              Buku Penilaian
+              Penilaian
             </button>
           </div>
 
-          <div className="flex gap-2 w-full md:w-auto">
-            <button
-              onClick={addNewStudent}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 font-bold text-xs uppercase rounded-xl hover:bg-emerald-200 transition-colors"
-            >
-              <Plus size={16} /> Tambah Siswa
-            </button>
-            <button
-              onClick={handleSave}
-              className="md:hidden flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-teal-600 text-white font-bold text-xs uppercase rounded-xl"
-            >
-              <Save size={16} /> Simpan
-            </button>
-          </div>
+          <button
+            onClick={addNewStudent}
+            className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-emerald-100 text-emerald-700 font-black text-xs uppercase rounded-xl hover:bg-emerald-200 transition-colors border border-emerald-200/50"
+          >
+            <Plus size={16} /> Tambah Data Siswa
+          </button>
         </div>
 
-        {/* TABEL AREA */}
+        {/* ================= TAMPILAN HP (MOBILE CARDS) ================= */}
+        <div className="md:hidden space-y-4">
+          <AnimatePresence>
+            {filteredStudents.map((s, idx) => {
+              const att = calculateAttendance(s);
+              const grades = calculateGrades(s);
+              return (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  key={s.id}
+                  className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+                >
+                  <div className="bg-slate-50 border-b border-slate-100 p-3 flex justify-between items-start">
+                    <div className="flex-1 mr-2">
+                      <input
+                        type="text"
+                        value={s.nama_siswa}
+                        onChange={(e) =>
+                          handleStudentChange(
+                            s.id,
+                            "nama_siswa",
+                            e.target.value,
+                          )
+                        }
+                        className="w-full bg-transparent font-black text-slate-800 text-sm focus:outline-none focus:border-b focus:border-teal-500"
+                        placeholder="Nama Siswa..."
+                      />
+                      <div className="flex gap-2 mt-1">
+                        <select
+                          value={s.kelas}
+                          onChange={(e) =>
+                            handleStudentChange(s.id, "kelas", e.target.value)
+                          }
+                          className="text-[10px] text-slate-500 font-bold bg-transparent outline-none border border-slate-200 rounded px-1 flex-1 py-0.5"
+                        >
+                          {KELAS_OPTIONS.filter((k) => k !== "Semua Kelas").map(
+                            (k) => (
+                              <option key={k} value={k}>
+                                {k}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                        <select
+                          value={s.mapel || "Al-Qur'an Hadis"}
+                          onChange={(e) =>
+                            handleStudentChange(s.id, "mapel", e.target.value)
+                          }
+                          className="text-[10px] text-slate-500 font-bold bg-transparent outline-none border border-slate-200 rounded px-1 flex-1 py-0.5"
+                        >
+                          {MAPEL_OPTIONS.filter((m) => m !== "Semua Mapel").map(
+                            (m) => (
+                              <option key={m} value={m}>
+                                {m}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => deleteStudent(s.id, s.nama_siswa)}
+                      className="p-2 text-red-400 hover:bg-red-50 rounded-lg shrink-0 mt-1"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <div className="p-3">
+                    {activeTab === "kehadiran" ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-6 gap-1.5">
+                          {pertemuanCols.map((col, i) => (
+                            <button
+                              key={col}
+                              onClick={() => cycleAttendance(s.id, col, s[col])}
+                              className="h-8 rounded flex items-center justify-center bg-slate-50 border border-slate-100 text-xs shadow-sm"
+                            >
+                              {s[col] ? (
+                                renderAttendanceCell(s[col])
+                              ) : (
+                                <span className="text-[9px] text-slate-300">
+                                  P{i + 1}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex justify-between border-t border-slate-100 pt-2 text-[11px] font-black">
+                          <span className="text-blue-600">S: {att.s}</span>
+                          <span className="text-amber-600">I: {att.i}</span>
+                          <span className="text-red-600">A: {att.a}</span>
+                          <span className="text-emerald-600 bg-emerald-50 px-2 rounded-full border border-emerald-100">
+                            Hadir (T): {att.t}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {/* Kode input nilai untuk mobile tetap sama... */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                              Tugas Harian
+                            </span>
+                            <div className="flex gap-1">
+                              {tugasCols.slice(0, 3).map((col) => (
+                                <input
+                                  key={col}
+                                  type="number"
+                                  placeholder="-"
+                                  value={s[col] || ""}
+                                  onChange={(e) =>
+                                    handleStudentChange(
+                                      s.id,
+                                      col,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-full h-8 text-center bg-emerald-50 text-emerald-900 text-xs font-bold rounded border border-emerald-100 outline-none focus:ring-1 focus:ring-emerald-400"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                              Ulangan (UH)
+                            </span>
+                            <div className="flex gap-1">
+                              {uhCols.slice(0, 3).map((col) => (
+                                <input
+                                  key={col}
+                                  type="number"
+                                  placeholder="-"
+                                  value={s[col] || ""}
+                                  onChange={(e) =>
+                                    handleStudentChange(
+                                      s.id,
+                                      col,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-full h-8 text-center bg-blue-50 text-blue-900 text-xs font-bold rounded border border-blue-100 outline-none focus:ring-1 focus:ring-blue-400"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                          <div className="flex-1">
+                            <span className="block text-[10px] font-bold text-slate-400 uppercase">
+                              U. Umum (UM)
+                            </span>
+                            <input
+                              type="number"
+                              value={s.um || ""}
+                              onChange={(e) =>
+                                handleStudentChange(s.id, "um", e.target.value)
+                              }
+                              className="w-full h-10 text-center bg-white border-2 border-amber-200 text-amber-900 text-sm font-black rounded-xl outline-none focus:border-amber-400 shadow-sm"
+                            />
+                          </div>
+                          <div className="flex-1 bg-teal-50 rounded-xl p-2 border border-teal-100 text-center">
+                            <span className="block text-[10px] font-black text-teal-600 uppercase">
+                              Nilai Rapor
+                            </span>
+                            <span className="block text-xl font-black text-teal-800">
+                              {grades.nr}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+          {filteredStudents.length === 0 && (
+            <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-300">
+              <p className="text-sm font-bold text-slate-400">
+                Tidak ada data untuk filter ini.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* ================= TAMPILAN PC / DEKSTOP (INLINE TABLE) ================= */}
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden"
+          className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden"
         >
-          <div className="overflow-x-auto p-1">
+          <div className="overflow-x-auto p-1 scrollbar-hide">
             <table className="w-full text-left border-collapse min-w-max">
               <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-black whitespace-nowrap">
                 <tr>
-                  <th className="px-4 py-4 text-center sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-12">
+                  <th className="px-4 py-4 text-center sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-12 align-bottom">
                     No
                   </th>
-                  <th className="px-4 py-4 sticky left-[3rem] bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[200px]">
-                    Nama Siswa
+                  <th className="px-4 py-4 sticky left-[3rem] bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[220px] align-bottom">
+                    Data Siswa
                   </th>
 
                   {activeTab === "kehadiran" && (
                     <>
+                      {/* HEADER TANGGAL DENGAN INPUT DATE */}
                       {pertemuanCols.map((_, i) => (
                         <th
                           key={i}
-                          className="px-2 py-4 text-center border-l border-slate-200 w-10"
-                          title={`Pertemuan ${i + 1}`}
+                          className="px-1 py-2 text-center border-l border-slate-200 w-16 align-top"
                         >
-                          P{i + 1}
+                          <input
+                            type="date"
+                            value={meetingDates[i] || ""}
+                            onChange={(e) =>
+                              handleDateChange(i, e.target.value)
+                            }
+                            className="w-full text-[9px] bg-transparent outline-none text-slate-500 cursor-pointer text-center"
+                          />
+                          <div className="mt-1 border-t border-slate-200 pt-1 font-black">
+                            P{i + 1}
+                          </div>
                         </th>
                       ))}
-                      <th className="px-3 py-4 text-center border-l border-slate-200 bg-blue-50 text-blue-700">
+                      <th className="px-3 py-4 text-center border-l border-slate-200 bg-blue-50 text-blue-700 align-bottom">
                         S
                       </th>
-                      <th className="px-3 py-4 text-center bg-amber-50 text-amber-700">
+                      <th className="px-3 py-4 text-center bg-amber-50 text-amber-700 align-bottom">
                         I
                       </th>
-                      <th className="px-3 py-4 text-center bg-red-50 text-red-700">
+                      <th className="px-3 py-4 text-center bg-red-50 text-red-700 align-bottom">
                         A
+                      </th>
+                      <th
+                        className="px-3 py-4 text-center bg-emerald-50 text-emerald-700 align-bottom font-black"
+                        title="Total Hadir"
+                      >
+                        T
                       </th>
                     </>
                   )}
@@ -321,158 +622,239 @@ export default function Absensi({ onBack }) {
                       {tugasCols.map((_, i) => (
                         <th
                           key={i}
-                          className="px-2 py-4 text-center border-l border-slate-200 w-16 bg-emerald-50/50"
+                          className="px-2 py-4 text-center border-l border-slate-200 w-16 bg-emerald-50/50 align-bottom"
                         >
                           T{i + 1}
                         </th>
                       ))}
-                      <th className="px-3 py-4 text-center bg-emerald-100 text-emerald-800">
+                      <th className="px-3 py-4 text-center bg-emerald-100 text-emerald-800 align-bottom">
                         R. Tgs
                       </th>
 
                       {uhCols.map((_, i) => (
                         <th
                           key={i}
-                          className="px-2 py-4 text-center border-l border-slate-200 w-16 bg-blue-50/50"
+                          className="px-2 py-4 text-center border-l border-slate-200 w-16 bg-blue-50/50 align-bottom"
                         >
                           UH{i + 1}
                         </th>
                       ))}
-                      <th className="px-3 py-4 text-center bg-blue-100 text-blue-800">
+                      <th className="px-3 py-4 text-center bg-blue-100 text-blue-800 align-bottom">
                         R. UH
                       </th>
 
                       <th
-                        className="px-4 py-4 text-center border-l border-slate-300 bg-slate-100"
+                        className="px-4 py-4 text-center border-l border-slate-300 bg-slate-100 align-bottom"
                         title="Rata-rata Harian (Tugas + UH)"
                       >
                         Nilai Harian (nh)
                       </th>
-                      <th className="px-4 py-4 text-center border-l border-slate-300 bg-amber-50 text-amber-800">
+                      <th className="px-4 py-4 text-center border-l border-slate-300 bg-amber-50 text-amber-800 align-bottom">
                         Ulangan Umum (UM)
                       </th>
-                      <th className="px-4 py-4 text-center border-l border-slate-300 bg-teal-100 text-teal-800 font-black text-xs">
+                      <th className="px-4 py-4 text-center border-l border-slate-300 bg-teal-100 text-teal-800 font-black text-xs align-bottom">
                         NILAI RAPOR
                       </th>
                     </>
                   )}
+                  <th className="px-4 py-4 text-center border-l border-slate-200 w-16 align-bottom">
+                    Opsi
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {students.map((s, idx) => {
-                  const att = calculateAttendance(s);
-                  const grades = calculateGrades(s);
-
-                  return (
-                    <tr
-                      key={s.id}
-                      className="hover:bg-slate-50/80 transition-colors group"
+                {filteredStudents.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={30}
+                      className="text-center py-12 text-slate-400 font-bold text-sm"
                     >
-                      <td className="px-4 py-3 text-center text-xs font-bold text-slate-400 sticky left-0 bg-white group-hover:bg-slate-50 z-10">
-                        {idx + 1}
-                      </td>
-                      <td className="px-4 py-3 sticky left-[3rem] bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                        <input
-                          type="text"
-                          value={s.nama_siswa}
-                          onChange={(e) =>
-                            handleStudentChange(
-                              s.id,
-                              "nama_siswa",
-                              e.target.value,
-                            )
-                          }
-                          className="w-full bg-transparent font-bold text-slate-800 text-sm focus:outline-none focus:border-b-2 focus:border-teal-500 px-1"
-                          placeholder="Nama Siswa..."
-                        />
-                      </td>
+                      Tidak ada data untuk kombinasi filter ini.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map((s, idx) => {
+                    const att = calculateAttendance(s);
+                    const grades = calculateGrades(s);
 
-                      {activeTab === "kehadiran" && (
-                        <>
-                          {pertemuanCols.map((col) => (
-                            <td
-                              key={col}
-                              onClick={() => cycleAttendance(s.id, col, s[col])}
-                              className="px-2 py-3 text-center border-l border-slate-100 cursor-pointer hover:bg-slate-200 transition-colors select-none"
-                            >
-                              {renderAttendanceCell(s[col])}
-                            </td>
-                          ))}
-                          <td className="px-3 py-3 text-center font-bold text-blue-600 bg-blue-50/30 border-l border-slate-200">
-                            {att.s || "-"}
-                          </td>
-                          <td className="px-3 py-3 text-center font-bold text-amber-600 bg-amber-50/30">
-                            {att.i || "-"}
-                          </td>
-                          <td className="px-3 py-3 text-center font-bold text-red-600 bg-red-50/30">
-                            {att.a || "-"}
-                          </td>
-                        </>
-                      )}
-
-                      {activeTab === "penilaian" && (
-                        <>
-                          {tugasCols.map((col) => (
-                            <td
-                              key={col}
-                              className="px-1 py-2 border-l border-slate-100 bg-emerald-50/20"
-                            >
-                              <input
-                                type="number"
-                                value={s[col] || ""}
-                                onChange={(e) =>
-                                  handleStudentChange(s.id, col, e.target.value)
-                                }
-                                className="w-full text-center bg-transparent text-sm font-medium focus:outline-none focus:bg-white rounded p-1"
-                              />
-                            </td>
-                          ))}
-                          <td className="px-3 py-3 text-center font-bold text-emerald-700 bg-emerald-50/50">
-                            {grades.avgT}
-                          </td>
-
-                          {uhCols.map((col) => (
-                            <td
-                              key={col}
-                              className="px-1 py-2 border-l border-slate-100 bg-blue-50/20"
-                            >
-                              <input
-                                type="number"
-                                value={s[col] || ""}
-                                onChange={(e) =>
-                                  handleStudentChange(s.id, col, e.target.value)
-                                }
-                                className="w-full text-center bg-transparent text-sm font-medium focus:outline-none focus:bg-white rounded p-1"
-                              />
-                            </td>
-                          ))}
-                          <td className="px-3 py-3 text-center font-bold text-blue-700 bg-blue-50/50">
-                            {grades.avgUH}
-                          </td>
-
-                          <td className="px-4 py-3 text-center font-black text-slate-700 border-l border-slate-200 bg-slate-50/50">
-                            {grades.nh}
-                          </td>
-
-                          <td className="px-1 py-2 border-l border-slate-200 bg-amber-50/30">
-                            <input
-                              type="number"
-                              value={s.um || ""}
+                    return (
+                      <tr
+                        key={s.id}
+                        className="hover:bg-slate-50/80 transition-colors group"
+                      >
+                        <td className="px-4 py-3 text-center text-xs font-bold text-slate-400 sticky left-0 bg-white group-hover:bg-slate-50 z-10">
+                          {idx + 1}
+                        </td>
+                        <td className="px-4 py-3 sticky left-[3rem] bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                          <input
+                            type="text"
+                            value={s.nama_siswa}
+                            onChange={(e) =>
+                              handleStudentChange(
+                                s.id,
+                                "nama_siswa",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full bg-transparent font-bold text-slate-800 text-sm focus:outline-none focus:border-b-2 focus:border-teal-500 px-1"
+                            placeholder="Nama Siswa..."
+                          />
+                          <div className="flex gap-1 mt-1 px-1">
+                            <select
+                              value={s.kelas}
                               onChange={(e) =>
-                                handleStudentChange(s.id, "um", e.target.value)
+                                handleStudentChange(
+                                  s.id,
+                                  "kelas",
+                                  e.target.value,
+                                )
                               }
-                              className="w-full text-center bg-white border border-amber-200 text-amber-900 text-sm font-black focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg p-1.5 shadow-inner"
-                            />
-                          </td>
+                              className="text-[10px] text-slate-400 font-bold bg-transparent outline-none border border-slate-200 rounded py-0.5"
+                            >
+                              {KELAS_OPTIONS.filter(
+                                (k) => k !== "Semua Kelas",
+                              ).map((k) => (
+                                <option key={k} value={k}>
+                                  {k}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              value={s.mapel || "Al-Qur'an Hadis"}
+                              onChange={(e) =>
+                                handleStudentChange(
+                                  s.id,
+                                  "mapel",
+                                  e.target.value,
+                                )
+                              }
+                              className="text-[10px] text-slate-400 font-bold bg-transparent outline-none border border-slate-200 rounded max-w-[100px] truncate py-0.5"
+                            >
+                              {MAPEL_OPTIONS.filter(
+                                (m) => m !== "Semua Mapel",
+                              ).map((m) => (
+                                <option key={m} value={m}>
+                                  {m}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </td>
 
-                          <td className="px-4 py-3 text-center font-black text-lg border-l border-slate-200 bg-teal-50/50 text-teal-700">
-                            {grades.nr}
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  );
-                })}
+                        {activeTab === "kehadiran" && (
+                          <>
+                            {pertemuanCols.map((col) => (
+                              <td
+                                key={col}
+                                onClick={() =>
+                                  cycleAttendance(s.id, col, s[col])
+                                }
+                                className="px-2 py-3 text-center border-l border-slate-100 cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                              >
+                                {renderAttendanceCell(s[col])}
+                              </td>
+                            ))}
+                            <td className="px-3 py-3 text-center font-bold text-blue-600 bg-blue-50/30 border-l border-slate-200">
+                              {att.s || "-"}
+                            </td>
+                            <td className="px-3 py-3 text-center font-bold text-amber-600 bg-amber-50/30">
+                              {att.i || "-"}
+                            </td>
+                            <td className="px-3 py-3 text-center font-bold text-red-600 bg-red-50/30">
+                              {att.a || "-"}
+                            </td>
+                            {/* KOLOM T (TOTAL HADIR) */}
+                            <td className="px-3 py-3 text-center font-black text-emerald-600 bg-emerald-50/50 text-lg border-l border-emerald-100/50">
+                              {att.t || "-"}
+                            </td>
+                          </>
+                        )}
+
+                        {activeTab === "penilaian" && (
+                          <>
+                            {tugasCols.map((col) => (
+                              <td
+                                key={col}
+                                className="px-1 py-2 border-l border-slate-100 bg-emerald-50/20"
+                              >
+                                <input
+                                  type="number"
+                                  value={s[col] || ""}
+                                  onChange={(e) =>
+                                    handleStudentChange(
+                                      s.id,
+                                      col,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-full text-center bg-transparent text-sm font-medium focus:outline-none focus:bg-white rounded p-1"
+                                />
+                              </td>
+                            ))}
+                            <td className="px-3 py-3 text-center font-bold text-emerald-700 bg-emerald-50/50">
+                              {grades.avgT}
+                            </td>
+
+                            {uhCols.map((col) => (
+                              <td
+                                key={col}
+                                className="px-1 py-2 border-l border-slate-100 bg-blue-50/20"
+                              >
+                                <input
+                                  type="number"
+                                  value={s[col] || ""}
+                                  onChange={(e) =>
+                                    handleStudentChange(
+                                      s.id,
+                                      col,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="w-full text-center bg-transparent text-sm font-medium focus:outline-none focus:bg-white rounded p-1"
+                                />
+                              </td>
+                            ))}
+                            <td className="px-3 py-3 text-center font-bold text-blue-700 bg-blue-50/50">
+                              {grades.avgUH}
+                            </td>
+
+                            <td className="px-4 py-3 text-center font-black text-slate-700 border-l border-slate-200 bg-slate-50/50">
+                              {grades.nh}
+                            </td>
+
+                            <td className="px-1 py-2 border-l border-slate-200 bg-amber-50/30">
+                              <input
+                                type="number"
+                                value={s.um || ""}
+                                onChange={(e) =>
+                                  handleStudentChange(
+                                    s.id,
+                                    "um",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full text-center bg-white border border-amber-200 text-amber-900 text-sm font-black focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg p-1.5 shadow-inner"
+                              />
+                            </td>
+
+                            <td className="px-4 py-3 text-center font-black text-lg border-l border-slate-200 bg-teal-50/50 text-teal-700">
+                              {grades.nr}
+                            </td>
+                          </>
+                        )}
+                        <td className="px-2 py-3 text-center border-l border-slate-100">
+                          <button
+                            onClick={() => deleteStudent(s.id, s.nama_siswa)}
+                            className="p-2 bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
+                            title="Hapus Siswa"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
