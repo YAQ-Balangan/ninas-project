@@ -20,19 +20,19 @@ export default function KisiTab({
               <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-10 border-r border-slate-200">
                 No
               </th>
-              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-24 border-r border-slate-200">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-24 border-r border-slate-200">
                 Kelas
               </th>
-              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-20">
+              <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-20">
                 Tahun
               </th>
-              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-40">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-40">
                 Mata Pelajaran
               </th>
               <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest w-28">
                 Judul
               </th>
-              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[9px] md:text-[10px] font-bold uppercase tracking-widest">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest">
                 Materi Pokok / Indikator
               </th>
               <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[9px] md:text-[10px] font-bold uppercase tracking-widest no-print w-20">

@@ -20,10 +20,10 @@ export default function SiswaTab({
               <th className="px-2 py-2 md:py-2.5 text-slate-500 text-center text-[10px] md:text-[11px] font-bold uppercase tracking-widest w-12 border-r border-slate-200">
                 No
               </th>
-              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-left text-[10px] md:text-[11px] font-bold uppercase tracking-widest border-r border-slate-200">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-center text-[10px] md:text-[11px] font-bold uppercase tracking-widest border-r border-slate-200">
                 Nama Lengkap
               </th>
-              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-[10px] md:text-[11px] font-bold uppercase tracking-widest w-40">
+              <th className="px-3 py-2 md:py-2.5 text-slate-500 text-center text-[10px] md:text-[11px] font-bold uppercase tracking-widest w-40">
                 Kelas
               </th>
               <th className="px-3 py-2 md:py-2.5 text-slate-500 text-center text-[10px] md:text-[11px] font-bold uppercase tracking-widest no-print w-48">
