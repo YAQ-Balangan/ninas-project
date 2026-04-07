@@ -36,27 +36,46 @@ const MAPEL_OPTIONS = [
   "Pendidikan Agama Islam",
 ];
 
+// FUNGSI PENOLONG: Pembuat UUID yang aman (Anti-Error Supabase di Localhost)
+const generateUUID = () => {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    var r = (Math.random() * 16) | 0,
+      v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export default function Absensi({ onBack }) {
   const [activeTab, setActiveTab] = useState("kehadiran");
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSaved, setLastSaved] = useState(new Date());
 
+  // State Identitas Dasar
   const [settings, setSettings] = useState({
     guru: "Ahmad Maulana",
     semester: "Ganjil",
     tahunAjaran: "2025/2026",
   });
 
+  // State DUAL FILTER & SORTING
   const [filterKelas, setFilterKelas] = useState("Semua Kelas");
   const [filterMapel, setFilterMapel] = useState("Semua Mapel");
   const [sortOrder, setSortOrder] = useState("asc");
 
+  // State Tanggal Pertemuan (P1-P18)
   const [meetingDates, setMeetingDates] = useState(Array(18).fill(""));
+
+  // Data Tabel
   const [students, setStudents] = useState([]);
 
+  // REFERENSI AUTO-SAVE PINTAR (Tidak ter-reset oleh ketikan pengguna)
   const studentsRef = useRef(students);
   const meetingDatesRef = useRef(meetingDates);
   const settingsRef = useRef(settings);
+  const lastSavedDataRef = useRef(""); // Melacak perubahan spesifik
 
   useEffect(() => {
     studentsRef.current = students;
@@ -72,7 +91,7 @@ export default function Absensi({ onBack }) {
   const tugasCols = ["t1", "t2", "t3", "t4", "t5"];
   const uhCols = ["uh1", "uh2", "uh3"];
 
-  // ================= 1. FETCH DATA DARI SUPABASE ================= //
+  // ================= 1. FETCH DATA DARI SUPABASE SAAT HALAMAN DIBUKA ================= //
   useEffect(() => {
     const fetchStudents = async () => {
       setIsSyncing(true);
@@ -98,6 +117,9 @@ export default function Absensi({ onBack }) {
             semester: data[0].semester || prev.semester,
             tahunAjaran: data[0].tahun_ajaran || prev.tahunAjaran,
           }));
+
+          // Catat struktur awal untuk pembanding Auto-Save
+          lastSavedDataRef.current = JSON.stringify(data);
         }
       } catch (err) {
         console.error("Gagal menarik data dari Supabase:", err.message);
@@ -109,31 +131,43 @@ export default function Absensi({ onBack }) {
     fetchStudents();
   }, []);
 
-  // ================= 2. FUNGSI AUTO-SAVE KE SUPABASE ================= //
-  const triggerAutoSave = async () => {
-    const currentStudents = studentsRef.current;
-    const currentDates = meetingDatesRef.current;
-    const currentSettings = settingsRef.current;
+  // ================= 2. FUNGSI SIMPAN KE SUPABASE (SMART AUTO-SAVE) ================= //
+  const performAutoSave = async () => {
+    const currStudents = studentsRef.current;
+    if (currStudents.length === 0) return;
 
-    if (currentStudents.length === 0) return;
+    // Susun data yang akan dikirim
+    const payload = currStudents.map((s) => {
+      const record = { ...s };
+      record.semester = settingsRef.current.semester;
+      record.tahun_ajaran = settingsRef.current.tahunAjaran;
+      for (let i = 0; i < 18; i++) {
+        record[`tgl${i + 1}`] = meetingDatesRef.current[i] || null;
+      }
+
+      // Bersihkan nilai angka kosong agar Supabase tidak error
+      const numericCols = [...tugasCols, ...uhCols, "um"];
+      numericCols.forEach((col) => {
+        if (record[col] === "") record[col] = null;
+      });
+
+      delete record.created_at;
+      return record;
+    });
+
+    const currentDataString = JSON.stringify(payload);
+    // Batalkan pengiriman jika sama persis dengan yang di database (Sangat Menghemat Kuota DB)
+    if (currentDataString === lastSavedDataRef.current) return;
 
     setIsSyncing(true);
     try {
-      const studentsToSave = currentStudents.map((s) => {
-        const record = { ...s };
-        record.semester = currentSettings.semester;
-        record.tahun_ajaran = currentSettings.tahunAjaran;
-        for (let i = 0; i < 18; i++) {
-          record[`tgl${i + 1}`] = currentDates[i] || null;
-        }
-        return record;
-      });
-
       const { error } = await supabase
         .from("absensi_ahmad")
-        .upsert(studentsToSave);
+        .upsert(payload, { onConflict: "id" });
 
       if (error) throw error;
+
+      lastSavedDataRef.current = currentDataString;
       setLastSaved(new Date());
     } catch (err) {
       console.error("Gagal auto-save ke Supabase:", err.message);
@@ -142,14 +176,11 @@ export default function Absensi({ onBack }) {
     }
   };
 
-  // ================= 3. INTERVAL AUTO SAVE 20 DETIK ================= //
+  // ================= 3. INTERVAL AUTO SAVE SETIAP 20 DETIK (Fix Anti Reset) ================= //
   useEffect(() => {
-    const interval = setInterval(() => {
-      triggerAutoSave();
-    }, 20000);
-
+    const interval = setInterval(performAutoSave, 20000);
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Array kosong memastikan timer tidak diganggu oleh ketikan Bapak
 
   // ================= SMART FILTER & SORTING LOGIC ================= //
   const handleFilterKelasChange = (e) => {
@@ -165,6 +196,9 @@ export default function Absensi({ onBack }) {
     }
   };
 
+  const toggleSort = () =>
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+
   const filteredStudents = useMemo(() => {
     let result = students.filter((s) => {
       const matchKelas =
@@ -174,6 +208,7 @@ export default function Absensi({ onBack }) {
       return matchKelas && matchMapel;
     });
 
+    // Urutkan A-Z / Z-A
     result.sort((a, b) => {
       const nameA = (a.nama_siswa || "").toLowerCase();
       const nameB = (b.nama_siswa || "").toLowerCase();
@@ -185,8 +220,17 @@ export default function Absensi({ onBack }) {
     return result;
   }, [students, filterKelas, filterMapel, sortOrder]);
 
-  const toggleSort = () => {
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+  // ================= AKSI MASSAL (HADIRKAN SEMUA) ================= //
+  const markAllPresent = (col) => {
+    const filteredIds = filteredStudents.map((s) => s.id);
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (filteredIds.includes(s.id)) {
+          return { ...s, [col]: "v" }; // Isi dengan Hadir
+        }
+        return s;
+      }),
+    );
   };
 
   // ================= CALCULATIONS ================= //
@@ -229,26 +273,17 @@ export default function Absensi({ onBack }) {
   };
 
   // ================= HANDLERS ================= //
-  const handleSettingChange = (field, value) => {
+  const handleSettingChange = (field, value) =>
     setSettings((prev) => ({ ...prev, [field]: value }));
-  };
-
   const handleDateChange = (index, value) => {
     const newDates = [...meetingDates];
     newDates[index] = value;
     setMeetingDates(newDates);
   };
-
   const handleStudentChange = (id, field, value) => {
     setStudents((prev) =>
       prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)),
     );
-  };
-
-  const cycleAttendance = (id, field, currentValue) => {
-    const cycle = { "": "v", v: "s", s: "i", i: "a", a: "" };
-    const nextVal = cycle[(currentValue || "").toLowerCase()] ?? "";
-    handleStudentChange(id, field, nextVal);
   };
 
   // ================= 4. TAMBAH & HAPUS SISWA ================= //
@@ -257,7 +292,7 @@ export default function Absensi({ onBack }) {
       filterKelas !== "Semua Kelas" ? filterKelas : "X MIPA 1";
     const defaultMapel =
       filterMapel !== "Semua Mapel" ? filterMapel : "Al-Qur'an Hadis";
-    const newId = crypto.randomUUID ? crypto.randomUUID() : "id-" + Date.now();
+    const newId = generateUUID();
 
     setStudents([
       ...students,
@@ -282,7 +317,6 @@ export default function Absensi({ onBack }) {
           .from("absensi_ahmad")
           .delete()
           .eq("id", id);
-
         if (error) throw error;
         setStudents((prev) => prev.filter((s) => s.id !== id));
       } catch (err) {
@@ -296,7 +330,9 @@ export default function Absensi({ onBack }) {
   const renderAttendanceCell = (val) => {
     const v = (val || "").toLowerCase();
     if (v === "v")
-      return <Check size={16} className="text-emerald-500 mx-auto" />;
+      return (
+        <Check size={16} className="text-emerald-500 mx-auto drop-shadow-sm" />
+      );
     if (v === "s") return <span className="text-blue-500 font-bold">S</span>;
     if (v === "i") return <span className="text-amber-500 font-bold">I</span>;
     if (v === "a") return <span className="text-red-500 font-bold">A</span>;
@@ -341,7 +377,7 @@ export default function Absensi({ onBack }) {
                   <span className="opacity-90 hidden sm:inline">
                     {isSyncing
                       ? "Menyinkronkan..."
-                      : `Tersimpan ${lastSaved.getHours()}:${String(lastSaved.getMinutes()).padStart(2, "0")}`}
+                      : `Auto-Save Aktif | ${lastSaved.getHours()}:${String(lastSaved.getMinutes()).padStart(2, "0")}`}
                   </span>
                 </div>
               </div>
@@ -454,6 +490,31 @@ export default function Absensi({ onBack }) {
 
         {/* ================= TAMPILAN HP (MOBILE CARDS) ================= */}
         <div className="md:hidden space-y-4">
+          {/* Fitur Sapu Jagat Khusus Tampilan HP */}
+          {activeTab === "kehadiran" && filteredStudents.length > 0 && (
+            <div className="mb-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between shadow-sm">
+              <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wide">
+                Aksi Cepat:
+              </span>
+              <select
+                onChange={(e) => {
+                  if (e.target.value) {
+                    markAllPresent(e.target.value);
+                    e.target.value = "";
+                  }
+                }}
+                className="text-[10px] font-bold bg-white border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg outline-none"
+              >
+                <option value="">Hadirkan Semua P...</option>
+                {pertemuanCols.map((col, i) => (
+                  <option key={col} value={col}>
+                    Hadirkan P{i + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <AnimatePresence>
             {filteredStudents.map((s, idx) => {
               const att = calculateAttendance(s);
@@ -527,20 +588,35 @@ export default function Absensi({ onBack }) {
                     {activeTab === "kehadiran" ? (
                       <div className="space-y-3">
                         <div className="grid grid-cols-6 gap-1.5">
+                          {/* TRIK DROPDOWN TEMBUS PANDANG (HP) */}
                           {pertemuanCols.map((col, i) => (
-                            <button
+                            <div
                               key={col}
-                              onClick={() => cycleAttendance(s.id, col, s[col])}
-                              className="h-8 rounded flex items-center justify-center bg-slate-50 border border-slate-100 text-xs shadow-sm"
+                              className="h-8 rounded bg-slate-50 border border-slate-100 text-xs shadow-sm relative overflow-hidden flex items-center justify-center"
                             >
-                              {s[col] ? (
-                                renderAttendanceCell(s[col])
-                              ) : (
-                                <span className="text-[9px] text-slate-300">
-                                  P{i + 1}
-                                </span>
-                              )}
-                            </button>
+                              <select
+                                value={(s[col] || "").toLowerCase()}
+                                onChange={(e) =>
+                                  handleStudentChange(s.id, col, e.target.value)
+                                }
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              >
+                                <option value="">(Kosong)</option>
+                                <option value="v">✔ Hadir</option>
+                                <option value="s">S - Sakit</option>
+                                <option value="i">I - Izin</option>
+                                <option value="a">A - Alpa</option>
+                              </select>
+                              <div className="pointer-events-none flex items-center justify-center w-full h-full">
+                                {s[col] ? (
+                                  renderAttendanceCell(s[col])
+                                ) : (
+                                  <span className="text-[9px] text-slate-300">
+                                    P{i + 1}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           ))}
                         </div>
                         <div className="flex justify-between border-t border-slate-100 pt-2 text-[11px] font-black">
@@ -647,7 +723,7 @@ export default function Absensi({ onBack }) {
           key={activeTab}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden relative"
+          className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden"
         >
           <div className="overflow-x-auto p-1 scrollbar-hide">
             <table className="w-full text-left border-collapse min-w-max">
@@ -671,11 +747,11 @@ export default function Absensi({ onBack }) {
 
                   {activeTab === "kehadiran" && (
                     <>
-                      {/* HEADER TANGGAL DENGAN INPUT DATE */}
+                      {/* HEADER TANGGAL DENGAN INPUT DATE + TOMBOL HADIRKAN SEMUA */}
                       {pertemuanCols.map((_, i) => (
                         <th
                           key={i}
-                          className="px-1 py-2 text-center border-l border-slate-200 w-16 align-top"
+                          className="px-1 py-2 text-center border-l border-slate-200 w-16 align-top group/head"
                         >
                           <input
                             type="date"
@@ -685,25 +761,29 @@ export default function Absensi({ onBack }) {
                             }
                             className="w-full text-[9px] bg-transparent outline-none text-slate-500 cursor-pointer text-center"
                           />
-                          <div className="mt-1 border-t border-slate-200 pt-1 font-black">
+                          <div className="mt-1 border-t border-slate-200 pt-1 font-black flex flex-col items-center gap-1">
                             P{i + 1}
+                            <button
+                              onClick={() => markAllPresent(pertemuanCols[i])}
+                              className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded shadow-sm hover:bg-emerald-200 transition-colors w-full"
+                              title={`Hadirkan Semua untuk P${i + 1}`}
+                            >
+                              Semua ✔
+                            </button>
                           </div>
                         </th>
                       ))}
-                      {/* =============== KOLOM STICKY KANAN (KEHADIRAN) =============== 
-                        Wajib pakai width fix (w-12 = 3rem = 48px) agar perhitungannya presisi
-                      */}
-                      <th className="px-3 py-4 text-center border-l border-slate-200 bg-blue-50 text-blue-700 align-bottom sticky right-[13rem] z-20 w-12 min-w-[3rem] max-w-[3rem] shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.05)]">
+                      <th className="px-3 py-4 text-center border-l border-slate-200 bg-blue-50 text-blue-700 align-bottom">
                         S
                       </th>
-                      <th className="px-3 py-4 text-center bg-amber-50 text-amber-700 align-bottom sticky right-[10rem] z-20 w-12 min-w-[3rem] max-w-[3rem]">
+                      <th className="px-3 py-4 text-center bg-amber-50 text-amber-700 align-bottom">
                         I
                       </th>
-                      <th className="px-3 py-4 text-center bg-red-50 text-red-700 align-bottom sticky right-[7rem] z-20 w-12 min-w-[3rem] max-w-[3rem]">
+                      <th className="px-3 py-4 text-center bg-red-50 text-red-700 align-bottom">
                         A
                       </th>
                       <th
-                        className="px-3 py-4 text-center bg-emerald-50 text-emerald-700 align-bottom font-black sticky right-[4rem] z-20 w-12 min-w-[3rem] max-w-[3rem]"
+                        className="px-3 py-4 text-center bg-emerald-50 text-emerald-700 align-bottom font-black"
                         title="Total Hadir"
                       >
                         T
@@ -746,15 +826,12 @@ export default function Absensi({ onBack }) {
                       <th className="px-4 py-4 text-center border-l border-slate-300 bg-amber-50 text-amber-800 align-bottom">
                         Ulangan Umum (UM)
                       </th>
-
-                      {/* =============== KOLOM STICKY KANAN (PENILAIAN) =============== */}
-                      <th className="px-4 py-4 text-center border-l border-slate-300 bg-teal-100 text-teal-800 font-black text-xs align-bottom sticky right-[4rem] z-20 w-24 min-w-[6rem] max-w-[6rem] shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.05)]">
+                      <th className="px-4 py-4 text-center border-l border-slate-300 bg-teal-100 text-teal-800 font-black text-xs align-bottom">
                         NILAI RAPOR
                       </th>
                     </>
                   )}
-                  {/* KOLOM OPSI STICKY PALING KANAN (KEDUA TAB SAMA) */}
-                  <th className="px-4 py-4 text-center border-l border-slate-200 align-bottom sticky right-0 z-20 bg-slate-50 w-16 min-w-[4rem] max-w-[4rem]">
+                  <th className="px-4 py-4 text-center border-l border-slate-200 w-16 align-bottom">
                     Opsi
                   </th>
                 </tr>
@@ -840,29 +917,44 @@ export default function Absensi({ onBack }) {
 
                         {activeTab === "kehadiran" && (
                           <>
+                            {/* TRIK DROPDOWN TEMBUS PANDANG (DESKTOP) */}
                             {pertemuanCols.map((col) => (
                               <td
                                 key={col}
-                                onClick={() =>
-                                  cycleAttendance(s.id, col, s[col])
-                                }
-                                className="px-2 py-3 text-center border-l border-slate-100 cursor-pointer hover:bg-slate-200 transition-colors select-none"
+                                className="px-0 py-0 text-center border-l border-slate-100 hover:bg-slate-200 transition-colors relative"
                               >
-                                {renderAttendanceCell(s[col])}
+                                <select
+                                  value={(s[col] || "").toLowerCase()}
+                                  onChange={(e) =>
+                                    handleStudentChange(
+                                      s.id,
+                                      col,
+                                      e.target.value,
+                                    )
+                                  }
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                >
+                                  <option value="">(Kosong)</option>
+                                  <option value="v">✔ Hadir</option>
+                                  <option value="s">S - Sakit</option>
+                                  <option value="i">I - Izin</option>
+                                  <option value="a">A - Alpa</option>
+                                </select>
+                                <div className="pointer-events-none flex items-center justify-center w-full h-full py-3">
+                                  {renderAttendanceCell(s[col])}
+                                </div>
                               </td>
                             ))}
-
-                            {/* BODY STICKY KANAN (KEHADIRAN) */}
-                            <td className="px-3 py-3 text-center font-bold text-blue-600 bg-blue-50 group-hover:bg-blue-100 border-l border-slate-200 sticky right-[13rem] z-10 w-12 min-w-[3rem] max-w-[3rem] shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.05)]">
+                            <td className="px-3 py-3 text-center font-bold text-blue-600 bg-blue-50/30 border-l border-slate-200">
                               {att.s || "-"}
                             </td>
-                            <td className="px-3 py-3 text-center font-bold text-amber-600 bg-amber-50 group-hover:bg-amber-100 sticky right-[10rem] z-10 w-12 min-w-[3rem] max-w-[3rem]">
+                            <td className="px-3 py-3 text-center font-bold text-amber-600 bg-amber-50/30">
                               {att.i || "-"}
                             </td>
-                            <td className="px-3 py-3 text-center font-bold text-red-600 bg-red-50 group-hover:bg-red-100 sticky right-[7rem] z-10 w-12 min-w-[3rem] max-w-[3rem]">
+                            <td className="px-3 py-3 text-center font-bold text-red-600 bg-red-50/30">
                               {att.a || "-"}
                             </td>
-                            <td className="px-3 py-3 text-center font-black text-emerald-600 bg-emerald-50 group-hover:bg-emerald-100 text-lg border-l border-emerald-100/50 sticky right-[4rem] z-10 w-12 min-w-[3rem] max-w-[3rem]">
+                            <td className="px-3 py-3 text-center font-black text-emerald-600 bg-emerald-50/50 text-lg border-l border-emerald-100/50">
                               {att.t || "-"}
                             </td>
                           </>
@@ -935,15 +1027,12 @@ export default function Absensi({ onBack }) {
                               />
                             </td>
 
-                            {/* BODY STICKY KANAN (PENILAIAN) */}
-                            <td className="px-4 py-3 text-center font-black text-lg border-l border-slate-200 bg-teal-50 group-hover:bg-teal-100 text-teal-700 sticky right-[4rem] z-10 w-24 min-w-[6rem] max-w-[6rem] shadow-[-10px_0_15px_-5px_rgba(0,0,0,0.05)]">
+                            <td className="px-4 py-3 text-center font-black text-lg border-l border-slate-200 bg-teal-50/50 text-teal-700">
                               {grades.nr}
                             </td>
                           </>
                         )}
-
-                        {/* BODY OPSI STICKY PALING KANAN */}
-                        <td className="px-2 py-3 text-center border-l border-slate-100 sticky right-0 z-10 bg-white group-hover:bg-slate-50 w-16 min-w-[4rem] max-w-[4rem]">
+                        <td className="px-2 py-3 text-center border-l border-slate-100">
                           <button
                             onClick={() => deleteStudent(s.id, s.nama_siswa)}
                             className="p-2 bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
