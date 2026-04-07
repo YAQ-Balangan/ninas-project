@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 // ==========================================
-// IMPORT SUPABASE CLIENT
+// IMPORT SUPABASE CLIENT BAPAK DI SINI
 // ==========================================
 import { supabase } from "../utils/supabaseClient";
 
@@ -36,7 +36,6 @@ const MAPEL_OPTIONS = [
   "Pendidikan Agama Islam",
 ];
 
-// FUNGSI PENOLONG: Pembuat UUID yang aman (Anti-Error Supabase di Localhost)
 const generateUUID = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -53,29 +52,23 @@ export default function Absensi({ onBack }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSaved, setLastSaved] = useState(new Date());
 
-  // State Identitas Dasar
   const [settings, setSettings] = useState({
     guru: "Ahmad Maulana",
     semester: "Ganjil",
     tahunAjaran: "2025/2026",
   });
 
-  // State DUAL FILTER & SORTING
   const [filterKelas, setFilterKelas] = useState("Semua Kelas");
   const [filterMapel, setFilterMapel] = useState("Semua Mapel");
   const [sortOrder, setSortOrder] = useState("asc");
 
-  // State Tanggal Pertemuan (P1-P18)
   const [meetingDates, setMeetingDates] = useState(Array(18).fill(""));
-
-  // Data Tabel
   const [students, setStudents] = useState([]);
 
-  // REFERENSI AUTO-SAVE PINTAR (Tidak ter-reset oleh ketikan pengguna)
   const studentsRef = useRef(students);
   const meetingDatesRef = useRef(meetingDates);
   const settingsRef = useRef(settings);
-  const lastSavedDataRef = useRef(""); // Melacak perubahan spesifik
+  const lastSavedDataRef = useRef("");
 
   useEffect(() => {
     studentsRef.current = students;
@@ -91,7 +84,7 @@ export default function Absensi({ onBack }) {
   const tugasCols = ["t1", "t2", "t3", "t4", "t5"];
   const uhCols = ["uh1", "uh2", "uh3"];
 
-  // ================= 1. FETCH DATA DARI SUPABASE SAAT HALAMAN DIBUKA ================= //
+  // ================= 1. FETCH DATA DARI SUPABASE ================= //
   useEffect(() => {
     const fetchStudents = async () => {
       setIsSyncing(true);
@@ -105,20 +98,16 @@ export default function Absensi({ onBack }) {
 
         if (data && data.length > 0) {
           setStudents(data);
-
           const dates = Array(18).fill("");
           for (let i = 0; i < 18; i++) {
             dates[i] = data[0][`tgl${i + 1}`] || "";
           }
           setMeetingDates(dates);
-
           setSettings((prev) => ({
             ...prev,
             semester: data[0].semester || prev.semester,
             tahunAjaran: data[0].tahun_ajaran || prev.tahunAjaran,
           }));
-
-          // Catat struktur awal untuk pembanding Auto-Save
           lastSavedDataRef.current = JSON.stringify(data);
         }
       } catch (err) {
@@ -127,7 +116,6 @@ export default function Absensi({ onBack }) {
         setIsSyncing(false);
       }
     };
-
     fetchStudents();
   }, []);
 
@@ -136,7 +124,6 @@ export default function Absensi({ onBack }) {
     const currStudents = studentsRef.current;
     if (currStudents.length === 0) return;
 
-    // Susun data yang akan dikirim
     const payload = currStudents.map((s) => {
       const record = { ...s };
       record.semester = settingsRef.current.semester;
@@ -145,7 +132,6 @@ export default function Absensi({ onBack }) {
         record[`tgl${i + 1}`] = meetingDatesRef.current[i] || null;
       }
 
-      // Bersihkan nilai angka kosong agar Supabase tidak error
       const numericCols = [...tugasCols, ...uhCols, "um"];
       numericCols.forEach((col) => {
         if (record[col] === "") record[col] = null;
@@ -156,7 +142,6 @@ export default function Absensi({ onBack }) {
     });
 
     const currentDataString = JSON.stringify(payload);
-    // Batalkan pengiriman jika sama persis dengan yang di database (Sangat Menghemat Kuota DB)
     if (currentDataString === lastSavedDataRef.current) return;
 
     setIsSyncing(true);
@@ -176,11 +161,11 @@ export default function Absensi({ onBack }) {
     }
   };
 
-  // ================= 3. INTERVAL AUTO SAVE SETIAP 20 DETIK (Fix Anti Reset) ================= //
+  // ================= 3. INTERVAL AUTO SAVE 20 DETIK ================= //
   useEffect(() => {
     const interval = setInterval(performAutoSave, 20000);
     return () => clearInterval(interval);
-  }, []); // Array kosong memastikan timer tidak diganggu oleh ketikan Bapak
+  }, []);
 
   // ================= SMART FILTER & SORTING LOGIC ================= //
   const handleFilterKelasChange = (e) => {
@@ -196,9 +181,6 @@ export default function Absensi({ onBack }) {
     }
   };
 
-  const toggleSort = () =>
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-
   const filteredStudents = useMemo(() => {
     let result = students.filter((s) => {
       const matchKelas =
@@ -208,7 +190,6 @@ export default function Absensi({ onBack }) {
       return matchKelas && matchMapel;
     });
 
-    // Urutkan A-Z / Z-A
     result.sort((a, b) => {
       const nameA = (a.nama_siswa || "").toLowerCase();
       const nameB = (b.nama_siswa || "").toLowerCase();
@@ -220,13 +201,15 @@ export default function Absensi({ onBack }) {
     return result;
   }, [students, filterKelas, filterMapel, sortOrder]);
 
-  // ================= AKSI MASSAL (HADIRKAN SEMUA) ================= //
+  const toggleSort = () =>
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+
   const markAllPresent = (col) => {
     const filteredIds = filteredStudents.map((s) => s.id);
     setStudents((prev) =>
       prev.map((s) => {
         if (filteredIds.includes(s.id)) {
-          return { ...s, [col]: "v" }; // Isi dengan Hadir
+          return { ...s, [col]: "v" };
         }
         return s;
       }),
@@ -285,8 +268,12 @@ export default function Absensi({ onBack }) {
       prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)),
     );
   };
+  const cycleAttendance = (id, field, currentValue) => {
+    const cycle = { "": "v", v: "s", s: "i", i: "a", a: "" };
+    const nextVal = cycle[(currentValue || "").toLowerCase()] ?? "";
+    handleStudentChange(id, field, nextVal);
+  };
 
-  // ================= 4. TAMBAH & HAPUS SISWA ================= //
   const addNewStudent = () => {
     const defaultKelas =
       filterKelas !== "Semua Kelas" ? filterKelas : "X MIPA 1";
@@ -330,9 +317,7 @@ export default function Absensi({ onBack }) {
   const renderAttendanceCell = (val) => {
     const v = (val || "").toLowerCase();
     if (v === "v")
-      return (
-        <Check size={16} className="text-emerald-500 mx-auto drop-shadow-sm" />
-      );
+      return <Check size={14} className="text-emerald-500 mx-auto" />;
     if (v === "s") return <span className="text-blue-500 font-bold">S</span>;
     if (v === "i") return <span className="text-amber-500 font-bold">I</span>;
     if (v === "a") return <span className="text-red-500 font-bold">A</span>;
@@ -340,34 +325,34 @@ export default function Absensi({ onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-3 md:p-8 font-sans pb-24">
-      <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
+    <div className="min-h-screen bg-slate-50 p-2 md:p-4 font-sans pb-24">
+      <div className="max-w-[1400px] mx-auto space-y-3 md:space-y-4">
         {/* HEADER / BANNER */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="bg-gradient-to-r from-teal-600 to-emerald-700 rounded-3xl p-5 md:p-6 text-white shadow-xl relative overflow-hidden"
+          className="bg-gradient-to-r from-teal-600 to-emerald-700 rounded-[1.5rem] p-4 text-white shadow-md relative overflow-hidden"
         >
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
 
-          <div className="flex flex-col md:flex-row justify-between items-start relative z-10 gap-4">
-            <div className="space-y-4 w-full">
+          <div className="flex flex-col md:flex-row justify-between items-start relative z-10 gap-3">
+            <div className="space-y-3 w-full">
               <div className="flex items-center justify-between md:justify-start gap-4">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={onBack}
-                    className="p-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+                    className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
                   >
-                    <ArrowLeft size={20} />
+                    <ArrowLeft size={18} />
                   </button>
-                  <h1 className="text-xl md:text-3xl font-black tracking-tight drop-shadow-md">
+                  <h1 className="text-lg md:text-xl font-black tracking-tight drop-shadow-sm">
                     Panel Guru
                   </h1>
                 </div>
                 {/* Indikator Auto Save */}
-                <div className="flex items-center gap-2 px-3 py-1 bg-black/20 rounded-full text-[10px] md:text-xs font-bold border border-white/10">
+                <div className="flex items-center gap-2 px-2.5 py-1 bg-black/20 rounded-full text-[9px] md:text-[10px] font-bold border border-white/10">
                   <RefreshCw
-                    size={12}
+                    size={10}
                     className={
                       isSyncing
                         ? "animate-spin text-teal-300"
@@ -383,15 +368,15 @@ export default function Absensi({ onBack }) {
               </div>
 
               {/* Editable Settings Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 bg-black/20 p-4 rounded-2xl backdrop-blur-sm border border-white/10">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-black/20 p-2.5 rounded-xl backdrop-blur-sm border border-white/10">
                 <div>
-                  <label className="text-[10px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
-                    <Users size={12} /> Filter Kelas
+                  <label className="text-[9px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
+                    <Users size={10} /> Filter Kelas
                   </label>
                   <select
                     value={filterKelas}
                     onChange={handleFilterKelasChange}
-                    className="w-full mt-1 bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-sm font-bold focus:outline-none focus:bg-white focus:text-teal-900 [&>option]:text-slate-800 transition-colors"
+                    className="w-full mt-0.5 bg-white/10 border border-white/20 rounded md:rounded-lg px-1.5 py-1 text-[11px] font-bold focus:outline-none focus:bg-white focus:text-teal-900 [&>option]:text-slate-800 transition-colors"
                   >
                     {KELAS_OPTIONS.map((k) => (
                       <option key={k} value={k}>
@@ -401,13 +386,13 @@ export default function Absensi({ onBack }) {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
-                    <BookOpen size={12} /> Filter Mapel
+                  <label className="text-[9px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
+                    <BookOpen size={10} /> Filter Mapel
                   </label>
                   <select
                     value={filterMapel}
                     onChange={(e) => setFilterMapel(e.target.value)}
-                    className="w-full mt-1 bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-sm font-bold focus:outline-none focus:bg-white focus:text-teal-900 [&>option]:text-slate-800 transition-colors"
+                    className="w-full mt-0.5 bg-white/10 border border-white/20 rounded md:rounded-lg px-1.5 py-1 text-[11px] font-bold focus:outline-none focus:bg-white focus:text-teal-900 [&>option]:text-slate-800 transition-colors"
                   >
                     {MAPEL_OPTIONS.map((m) => (
                       <option key={m} value={m}>
@@ -417,23 +402,23 @@ export default function Absensi({ onBack }) {
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
-                    <Calendar size={12} /> Semester
+                  <label className="text-[9px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
+                    <Calendar size={10} /> Semester
                   </label>
                   <select
                     value={settings.semester}
                     onChange={(e) =>
                       handleSettingChange("semester", e.target.value)
                     }
-                    className="w-full mt-1 bg-transparent border-b border-teal-400/50 text-sm font-bold focus:outline-none focus:border-white [&>option]:text-slate-800 transition-colors"
+                    className="w-full mt-0.5 bg-transparent border-b border-teal-400/50 text-[11px] font-bold focus:outline-none focus:border-white [&>option]:text-slate-800 transition-colors"
                   >
                     <option value="Ganjil">Ganjil</option>
                     <option value="Genap">Genap</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
-                    <Calendar size={12} /> Thn Ajaran
+                  <label className="text-[9px] text-teal-100 uppercase font-bold tracking-wider flex items-center gap-1">
+                    <Calendar size={10} /> Thn Ajaran
                   </label>
                   <input
                     type="text"
@@ -441,7 +426,7 @@ export default function Absensi({ onBack }) {
                     onChange={(e) =>
                       handleSettingChange("tahunAjaran", e.target.value)
                     }
-                    className="w-full mt-1 bg-transparent border-b border-teal-400/50 text-sm font-bold focus:outline-none focus:border-white transition-colors"
+                    className="w-full mt-0.5 bg-transparent border-b border-teal-400/50 text-[11px] font-bold focus:outline-none focus:border-white transition-colors"
                   />
                 </div>
               </div>
@@ -450,17 +435,17 @@ export default function Absensi({ onBack }) {
         </motion.div>
 
         {/* TABS & CONTROLS */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-3">
-          <div className="flex w-full md:w-auto bg-white p-1.5 rounded-xl md:rounded-2xl shadow-sm border border-slate-200">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-2">
+          <div className="flex w-full md:w-auto bg-white p-1 rounded-xl shadow-sm border border-slate-200">
             <button
               onClick={() => setActiveTab("kehadiran")}
-              className={`flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase transition-all ${activeTab === "kehadiran" ? "bg-teal-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"}`}
+              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-[10px] md:text-[11px] font-black uppercase transition-all ${activeTab === "kehadiran" ? "bg-teal-500 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}
             >
               Kehadiran
             </button>
             <button
               onClick={() => setActiveTab("penilaian")}
-              className={`flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black uppercase transition-all ${activeTab === "penilaian" ? "bg-teal-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-50"}`}
+              className={`flex-1 md:flex-none px-4 py-1.5 rounded-lg text-[10px] md:text-[11px] font-black uppercase transition-all ${activeTab === "penilaian" ? "bg-teal-500 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}
             >
               Penilaian
             </button>
@@ -468,31 +453,18 @@ export default function Absensi({ onBack }) {
 
           <div className="flex gap-2 w-full md:w-auto">
             <button
-              onClick={toggleSort}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-white text-slate-600 font-bold text-[10px] md:text-xs uppercase rounded-xl hover:bg-slate-50 transition-colors border border-slate-200 shadow-sm"
-            >
-              <ArrowUpDown
-                size={16}
-                className={
-                  sortOrder === "asc" ? "text-emerald-500" : "text-amber-500"
-                }
-              />
-              Sortir {sortOrder === "asc" ? "A-Z" : "Z-A"}
-            </button>
-            <button
               onClick={addNewStudent}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-100 text-emerald-700 font-black text-[10px] md:text-xs uppercase rounded-xl hover:bg-emerald-200 transition-colors border border-emerald-200/50"
+              className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-100 text-emerald-700 font-black text-[10px] uppercase rounded-xl hover:bg-emerald-200 transition-colors border border-emerald-200/50"
             >
-              <Plus size={16} /> Tambah Data
+              <Plus size={14} /> Tambah Data
             </button>
           </div>
         </div>
 
         {/* ================= TAMPILAN HP (MOBILE CARDS) ================= */}
-        <div className="md:hidden space-y-4">
-          {/* Fitur Sapu Jagat Khusus Tampilan HP */}
+        <div className="md:hidden space-y-3">
           {activeTab === "kehadiran" && filteredStudents.length > 0 && (
-            <div className="mb-2 p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between shadow-sm">
+            <div className="mb-2 p-2 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center justify-between shadow-sm">
               <span className="text-[10px] font-black text-emerald-800 uppercase tracking-wide">
                 Aksi Cepat:
               </span>
@@ -503,7 +475,7 @@ export default function Absensi({ onBack }) {
                     e.target.value = "";
                   }
                 }}
-                className="text-[10px] font-bold bg-white border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg outline-none"
+                className="text-[9px] font-bold bg-white border border-emerald-200 text-emerald-700 px-2 py-1 rounded outline-none"
               >
                 <option value="">Hadirkan Semua P...</option>
                 {pertemuanCols.map((col, i) => (
@@ -526,9 +498,9 @@ export default function Absensi({ onBack }) {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   key={s.id}
-                  className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
+                  className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
                 >
-                  <div className="bg-slate-50 border-b border-slate-100 p-3 flex justify-between items-start">
+                  <div className="bg-slate-50 border-b border-slate-100 p-2 flex justify-between items-start">
                     <div className="flex-1 mr-2">
                       <input
                         type="text"
@@ -540,16 +512,16 @@ export default function Absensi({ onBack }) {
                             e.target.value,
                           )
                         }
-                        className="w-full bg-transparent font-black text-slate-800 text-sm focus:outline-none focus:border-b focus:border-teal-500"
+                        className="w-full bg-transparent font-black text-slate-800 text-[11px] focus:outline-none focus:border-b focus:border-teal-500"
                         placeholder="Nama Siswa..."
                       />
-                      <div className="flex gap-2 mt-1">
+                      <div className="flex gap-1 mt-0.5">
                         <select
                           value={s.kelas || ""}
                           onChange={(e) =>
                             handleStudentChange(s.id, "kelas", e.target.value)
                           }
-                          className="text-[10px] text-slate-500 font-bold bg-transparent outline-none border border-slate-200 rounded px-1 flex-1 py-0.5"
+                          className="text-[9px] text-slate-500 font-bold bg-transparent outline-none border border-slate-200 rounded px-1 flex-1 py-0"
                         >
                           {KELAS_OPTIONS.filter((k) => k !== "Semua Kelas").map(
                             (k) => (
@@ -564,7 +536,7 @@ export default function Absensi({ onBack }) {
                           onChange={(e) =>
                             handleStudentChange(s.id, "mapel", e.target.value)
                           }
-                          className="text-[10px] text-slate-500 font-bold bg-transparent outline-none border border-slate-200 rounded px-1 flex-1 py-0.5"
+                          className="text-[9px] text-slate-500 font-bold bg-transparent outline-none border border-slate-200 rounded px-1 flex-1 py-0"
                         >
                           {MAPEL_OPTIONS.filter((m) => m !== "Semua Mapel").map(
                             (m) => (
@@ -578,21 +550,20 @@ export default function Absensi({ onBack }) {
                     </div>
                     <button
                       onClick={() => deleteStudent(s.id, s.nama_siswa)}
-                      className="p-2 text-red-400 hover:bg-red-50 rounded-lg shrink-0 mt-1"
+                      className="p-1.5 text-red-400 hover:bg-red-50 rounded shrink-0"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
 
-                  <div className="p-3">
+                  <div className="p-2">
                     {activeTab === "kehadiran" ? (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-6 gap-1.5">
-                          {/* TRIK DROPDOWN TEMBUS PANDANG (HP) */}
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-6 gap-1">
                           {pertemuanCols.map((col, i) => (
                             <div
                               key={col}
-                              className="h-8 rounded bg-slate-50 border border-slate-100 text-xs shadow-sm relative overflow-hidden flex items-center justify-center"
+                              className="h-6 rounded bg-slate-50 border border-slate-100 text-[10px] shadow-sm relative overflow-hidden flex items-center justify-center"
                             >
                               <select
                                 value={(s[col] || "").toLowerCase()}
@@ -601,17 +572,17 @@ export default function Absensi({ onBack }) {
                                 }
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                               >
-                                <option value="">(Kosong)</option>
-                                <option value="v">✔ Hadir</option>
-                                <option value="s">S - Sakit</option>
-                                <option value="i">I - Izin</option>
-                                <option value="a">A - Alpa</option>
+                                <option value="">(Ksg)</option>
+                                <option value="v">✔</option>
+                                <option value="s">Sakit</option>
+                                <option value="i">Izin</option>
+                                <option value="a">Alpa</option>
                               </select>
                               <div className="pointer-events-none flex items-center justify-center w-full h-full">
                                 {s[col] ? (
                                   renderAttendanceCell(s[col])
                                 ) : (
-                                  <span className="text-[9px] text-slate-300">
+                                  <span className="text-[8px] text-slate-300">
                                     P{i + 1}
                                   </span>
                                 )}
@@ -619,21 +590,21 @@ export default function Absensi({ onBack }) {
                             </div>
                           ))}
                         </div>
-                        <div className="flex justify-between border-t border-slate-100 pt-2 text-[11px] font-black">
+                        <div className="flex justify-between border-t border-slate-100 pt-1.5 text-[9px] font-black">
                           <span className="text-blue-600">S: {att.s}</span>
                           <span className="text-amber-600">I: {att.i}</span>
                           <span className="text-red-600">A: {att.a}</span>
-                          <span className="text-emerald-600 bg-emerald-50 px-2 rounded-full border border-emerald-100">
-                            Hadir (T): {att.t}
+                          <span className="text-emerald-600 bg-emerald-50 px-1.5 rounded-sm border border-emerald-100">
+                            T: {att.t}
                           </span>
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                              Tugas Harian
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-0.5">
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">
+                              Tugas
                             </span>
                             <div className="flex gap-1">
                               {tugasCols.slice(0, 3).map((col) => (
@@ -649,14 +620,14 @@ export default function Absensi({ onBack }) {
                                       e.target.value,
                                     )
                                   }
-                                  className="w-full h-8 text-center bg-emerald-50 text-emerald-900 text-xs font-bold rounded border border-emerald-100 outline-none focus:ring-1 focus:ring-emerald-400"
+                                  className="w-full h-6 text-center bg-emerald-50 text-emerald-900 text-[10px] font-bold rounded border border-emerald-100 outline-none"
                                 />
                               ))}
                             </div>
                           </div>
-                          <div className="space-y-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                              Ulangan (UH)
+                          <div className="space-y-0.5">
+                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">
+                              Ulangan
                             </span>
                             <div className="flex gap-1">
                               {uhCols.slice(0, 3).map((col) => (
@@ -672,17 +643,17 @@ export default function Absensi({ onBack }) {
                                       e.target.value,
                                     )
                                   }
-                                  className="w-full h-8 text-center bg-blue-50 text-blue-900 text-xs font-bold rounded border border-blue-100 outline-none focus:ring-1 focus:ring-blue-400"
+                                  className="w-full h-6 text-center bg-blue-50 text-blue-900 text-[10px] font-bold rounded border border-blue-100 outline-none"
                                 />
                               ))}
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
                           <div className="flex-1">
-                            <span className="block text-[10px] font-bold text-slate-400 uppercase">
-                              U. Umum (UM)
+                            <span className="block text-[8px] font-bold text-slate-400 uppercase">
+                              U. Umum
                             </span>
                             <input
                               type="number"
@@ -690,14 +661,14 @@ export default function Absensi({ onBack }) {
                               onChange={(e) =>
                                 handleStudentChange(s.id, "um", e.target.value)
                               }
-                              className="w-full h-10 text-center bg-white border-2 border-amber-200 text-amber-900 text-sm font-black rounded-xl outline-none focus:border-amber-400 shadow-sm"
+                              className="w-full h-7 text-center bg-white border border-amber-200 text-amber-900 text-[11px] font-black rounded-lg outline-none"
                             />
                           </div>
-                          <div className="flex-1 bg-teal-50 rounded-xl p-2 border border-teal-100 text-center">
-                            <span className="block text-[10px] font-black text-teal-600 uppercase">
-                              Nilai Rapor
+                          <div className="flex-1 bg-teal-50 rounded-lg p-1 border border-teal-100 text-center">
+                            <span className="block text-[8px] font-black text-teal-600 uppercase">
+                              Rapor
                             </span>
-                            <span className="block text-xl font-black text-teal-800">
+                            <span className="block text-sm font-black text-teal-800">
                               {grades.nr}
                             </span>
                           </div>
@@ -710,48 +681,49 @@ export default function Absensi({ onBack }) {
             })}
           </AnimatePresence>
           {filteredStudents.length === 0 && (
-            <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-300">
-              <p className="text-sm font-bold text-slate-400">
+            <div className="text-center py-6 bg-white rounded-xl border border-dashed border-slate-300">
+              <p className="text-[10px] font-bold text-slate-400">
                 Tidak ada data untuk filter ini.
               </p>
             </div>
           )}
         </div>
 
-        {/* ================= TAMPILAN PC / DEKSTOP (INLINE TABLE) ================= */}
+        {/* ================= TAMPILAN PC / DEKSTOP (ULTRA-COMPACT TABLE) ================= */}
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="hidden md:block bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden"
+          className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"
         >
-          <div className="overflow-x-auto p-1 scrollbar-hide">
+          {/* Scroll Area untuk Tabel Padat */}
+          <div className="overflow-x-auto overflow-y-auto max-h-[75vh] scrollbar-thin scrollbar-thumb-slate-200 p-0.5">
             <table className="w-full text-left border-collapse min-w-max">
-              <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] font-black whitespace-nowrap">
+              <thead className="bg-slate-100 text-slate-600 uppercase text-[9px] font-black whitespace-nowrap sticky top-0 z-30 shadow-sm">
                 <tr>
-                  <th className="px-4 py-4 text-center sticky left-0 bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] w-12 align-bottom">
+                  <th className="px-2 py-1.5 text-center bg-slate-100 w-8 align-middle">
                     No
                   </th>
-                  <th className="px-4 py-4 sticky left-[3rem] bg-slate-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] min-w-[220px] align-bottom">
+                  <th className="px-2 py-1.5 bg-slate-100 min-w-[180px] align-middle border-r border-slate-200">
                     <div className="flex items-center justify-between">
                       Data Siswa
                       <button
                         onClick={toggleSort}
-                        className="text-slate-400 hover:text-emerald-500 p-1 transition-colors"
+                        className="text-slate-400 hover:text-emerald-500 p-0.5 transition-colors"
                         title="Urutkan A-Z"
                       >
-                        <ArrowUpDown size={14} />
+                        <ArrowUpDown size={12} />
                       </button>
                     </div>
                   </th>
 
                   {activeTab === "kehadiran" && (
                     <>
-                      {/* HEADER TANGGAL DENGAN INPUT DATE + TOMBOL HADIRKAN SEMUA */}
+                      {/* HEADER TANGGAL */}
                       {pertemuanCols.map((_, i) => (
                         <th
                           key={i}
-                          className="px-1 py-2 text-center border-l border-slate-200 w-16 align-top group/head"
+                          className="px-0.5 py-1 text-center border-r border-slate-200 w-10 align-top group/head bg-white"
                         >
                           <input
                             type="date"
@@ -759,31 +731,31 @@ export default function Absensi({ onBack }) {
                             onChange={(e) =>
                               handleDateChange(i, e.target.value)
                             }
-                            className="w-full text-[9px] bg-transparent outline-none text-slate-500 cursor-pointer text-center"
+                            className="w-full text-[8px] bg-transparent outline-none text-slate-400 cursor-pointer text-center"
                           />
-                          <div className="mt-1 border-t border-slate-200 pt-1 font-black flex flex-col items-center gap-1">
+                          <div className="mt-0.5 border-t border-slate-100 pt-0.5 text-[9px] font-black flex flex-col items-center">
                             P{i + 1}
                             <button
                               onClick={() => markAllPresent(pertemuanCols[i])}
-                              className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded shadow-sm hover:bg-emerald-200 transition-colors w-full"
-                              title={`Hadirkan Semua untuk P${i + 1}`}
+                              className="text-[7px] mt-0.5 bg-emerald-100 text-emerald-700 px-1 py-0 rounded hover:bg-emerald-200 w-full"
                             >
-                              Semua ✔
+                              ✔ All
                             </button>
                           </div>
                         </th>
                       ))}
-                      <th className="px-3 py-4 text-center border-l border-slate-200 bg-blue-50 text-blue-700 align-bottom">
+                      {/* STICKY HEADERS (KEHADIRAN) */}
+                      <th className="px-1.5 py-1.5 text-center border-l-2 border-slate-300 bg-blue-50 text-blue-700 align-middle sticky right-[7.5rem] z-40 w-10 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
                         S
                       </th>
-                      <th className="px-3 py-4 text-center bg-amber-50 text-amber-700 align-bottom">
+                      <th className="px-1.5 py-1.5 text-center border-r border-amber-100 bg-amber-50 text-amber-700 align-middle sticky right-[5rem] z-40 w-10">
                         I
                       </th>
-                      <th className="px-3 py-4 text-center bg-red-50 text-red-700 align-bottom">
+                      <th className="px-1.5 py-1.5 text-center border-r border-red-100 bg-red-50 text-red-700 align-middle sticky right-[2.5rem] z-40 w-10">
                         A
                       </th>
                       <th
-                        className="px-3 py-4 text-center bg-emerald-50 text-emerald-700 align-bottom font-black"
+                        className="px-1.5 py-1.5 text-center border-r border-emerald-100 bg-emerald-50 text-emerald-700 align-middle sticky right-0 z-40 w-10"
                         title="Total Hadir"
                       >
                         T
@@ -796,52 +768,55 @@ export default function Absensi({ onBack }) {
                       {tugasCols.map((_, i) => (
                         <th
                           key={i}
-                          className="px-2 py-4 text-center border-l border-slate-200 w-16 bg-emerald-50/50 align-bottom"
+                          className="px-1 py-1.5 text-center border-r border-slate-200 w-10 bg-emerald-50/30 align-middle"
                         >
                           T{i + 1}
                         </th>
                       ))}
-                      <th className="px-3 py-4 text-center bg-emerald-100 text-emerald-800 align-bottom">
-                        R. Tgs
+                      <th className="px-1.5 py-1.5 text-center border-r border-emerald-200 bg-emerald-100 text-emerald-800 align-middle">
+                        R.Tgs
                       </th>
 
                       {uhCols.map((_, i) => (
                         <th
                           key={i}
-                          className="px-2 py-4 text-center border-l border-slate-200 w-16 bg-blue-50/50 align-bottom"
+                          className="px-1 py-1.5 text-center border-r border-slate-200 w-10 bg-blue-50/30 align-middle"
                         >
                           UH{i + 1}
                         </th>
                       ))}
-                      <th className="px-3 py-4 text-center bg-blue-100 text-blue-800 align-bottom">
-                        R. UH
+                      <th className="px-1.5 py-1.5 text-center border-r border-blue-200 bg-blue-100 text-blue-800 align-middle">
+                        R.UH
                       </th>
 
                       <th
-                        className="px-4 py-4 text-center border-l border-slate-300 bg-slate-100 align-bottom"
-                        title="Rata-rata Harian (Tugas + UH)"
+                        className="px-2 py-1.5 text-center border-r border-slate-200 bg-slate-50 align-middle"
+                        title="Rata-rata Harian"
                       >
-                        Nilai Harian (nh)
+                        NH
                       </th>
-                      <th className="px-4 py-4 text-center border-l border-slate-300 bg-amber-50 text-amber-800 align-bottom">
-                        Ulangan Umum (UM)
+                      <th className="px-2 py-1.5 text-center border-r border-amber-200 bg-amber-50 text-amber-800 align-middle">
+                        UM
                       </th>
-                      <th className="px-4 py-4 text-center border-l border-slate-300 bg-teal-100 text-teal-800 font-black text-xs align-bottom">
-                        NILAI RAPOR
+
+                      {/* STICKY HEADERS (PENILAIAN) */}
+                      <th className="px-2 py-1.5 text-center border-l-2 border-slate-300 bg-teal-100 text-teal-800 font-black text-[10px] align-middle sticky right-0 z-40 w-16 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
+                        RAPOR
                       </th>
                     </>
                   )}
-                  <th className="px-4 py-4 text-center border-l border-slate-200 w-16 align-bottom">
-                    Opsi
-                  </th>
+                  {/* OPSI DIPINDAH KE KIRI JIKA DI PENILAIAN (AGAR RAPOR TETAP DI UJUNG KANAN) */}
+                  {activeTab === "kehadiran" ? (
+                    <th className="px-1 py-1.5 text-center bg-slate-100 border-l border-slate-200 align-middle w-8 opacity-0"></th> // Placeholder spacer
+                  ) : null}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 text-[10px] text-slate-700">
                 {filteredStudents.length === 0 ? (
                   <tr>
                     <td
                       colSpan={30}
-                      className="text-center py-12 text-slate-400 font-bold text-sm"
+                      className="text-center py-8 text-slate-400 font-bold"
                     >
                       Tidak ada data untuk kombinasi filter ini.
                     </td>
@@ -852,14 +827,21 @@ export default function Absensi({ onBack }) {
                     const grades = calculateGrades(s);
 
                     return (
-                      <tr
-                        key={s.id}
-                        className="hover:bg-slate-50/80 transition-colors group"
-                      >
-                        <td className="px-4 py-3 text-center text-xs font-bold text-slate-400 sticky left-0 bg-white group-hover:bg-slate-50 z-10">
-                          {idx + 1}
+                      <tr key={s.id} className="hover:bg-slate-50/80 group">
+                        <td className="px-2 py-0.5 text-center font-bold text-slate-400 bg-white group-hover:bg-slate-50 relative">
+                          {/* TOMBOL HAPUS (MUNCUL SAAT HOVER DI NOMOR) */}
+                          <button
+                            onClick={() => deleteStudent(s.id, s.nama_siswa)}
+                            className="absolute left-1 top-1/2 -translate-y-1/2 p-0.5 text-red-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded"
+                            title="Hapus"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                          <span className="group-hover:opacity-0 transition-opacity">
+                            {idx + 1}
+                          </span>
                         </td>
-                        <td className="px-4 py-3 sticky left-[3rem] bg-white group-hover:bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                        <td className="px-2 py-0.5 bg-white group-hover:bg-slate-50 border-r border-slate-100">
                           <input
                             type="text"
                             value={s.nama_siswa || ""}
@@ -870,10 +852,10 @@ export default function Absensi({ onBack }) {
                                 e.target.value,
                               )
                             }
-                            className="w-full bg-transparent font-bold text-slate-800 text-sm focus:outline-none focus:border-b-2 focus:border-teal-500 px-1"
+                            className="w-full bg-transparent font-bold text-slate-800 text-[11px] focus:outline-none"
                             placeholder="Nama Siswa..."
                           />
-                          <div className="flex gap-1 mt-1 px-1">
+                          <div className="flex gap-1 mt-0">
                             <select
                               value={s.kelas || ""}
                               onChange={(e) =>
@@ -883,7 +865,7 @@ export default function Absensi({ onBack }) {
                                   e.target.value,
                                 )
                               }
-                              className="text-[10px] text-slate-400 font-bold bg-transparent outline-none border border-slate-200 rounded py-0.5"
+                              className="text-[8px] text-slate-400 font-bold bg-transparent outline-none py-0"
                             >
                               {KELAS_OPTIONS.filter(
                                 (k) => k !== "Semua Kelas",
@@ -902,7 +884,7 @@ export default function Absensi({ onBack }) {
                                   e.target.value,
                                 )
                               }
-                              className="text-[10px] text-slate-400 font-bold bg-transparent outline-none border border-slate-200 rounded max-w-[100px] truncate py-0.5"
+                              className="text-[8px] text-slate-400 font-bold bg-transparent outline-none max-w-[70px] truncate py-0"
                             >
                               {MAPEL_OPTIONS.filter(
                                 (m) => m !== "Semua Mapel",
@@ -917,11 +899,11 @@ export default function Absensi({ onBack }) {
 
                         {activeTab === "kehadiran" && (
                           <>
-                            {/* TRIK DROPDOWN TEMBUS PANDANG (DESKTOP) */}
+                            {/* SEL KEHADIRAN */}
                             {pertemuanCols.map((col) => (
                               <td
                                 key={col}
-                                className="px-0 py-0 text-center border-l border-slate-100 hover:bg-slate-200 transition-colors relative"
+                                className="px-0 py-0 text-center border-r border-slate-50 hover:bg-slate-100 relative"
                               >
                                 <select
                                   value={(s[col] || "").toLowerCase()}
@@ -934,27 +916,29 @@ export default function Absensi({ onBack }) {
                                   }
                                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                 >
-                                  <option value="">(Kosong)</option>
+                                  <option value="">-</option>
                                   <option value="v">✔ Hadir</option>
-                                  <option value="s">S - Sakit</option>
-                                  <option value="i">I - Izin</option>
-                                  <option value="a">A - Alpa</option>
+                                  <option value="s">Sakit</option>
+                                  <option value="i">Izin</option>
+                                  <option value="a">Alpa</option>
                                 </select>
-                                <div className="pointer-events-none flex items-center justify-center w-full h-full py-3">
+                                <div className="pointer-events-none flex items-center justify-center w-full h-5">
                                   {renderAttendanceCell(s[col])}
                                 </div>
                               </td>
                             ))}
-                            <td className="px-3 py-3 text-center font-bold text-blue-600 bg-blue-50/30 border-l border-slate-200">
+
+                            {/* STICKY BODY CELLS (KEHADIRAN) */}
+                            <td className="px-1.5 py-0.5 text-center font-bold text-blue-600 bg-blue-50/50 group-hover:bg-blue-100/50 border-l-2 border-slate-200 sticky right-[7.5rem] z-20 w-10 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
                               {att.s || "-"}
                             </td>
-                            <td className="px-3 py-3 text-center font-bold text-amber-600 bg-amber-50/30">
+                            <td className="px-1.5 py-0.5 text-center font-bold text-amber-600 bg-amber-50/50 group-hover:bg-amber-100/50 border-r border-amber-100 sticky right-[5rem] z-20 w-10">
                               {att.i || "-"}
                             </td>
-                            <td className="px-3 py-3 text-center font-bold text-red-600 bg-red-50/30">
+                            <td className="px-1.5 py-0.5 text-center font-bold text-red-600 bg-red-50/50 group-hover:bg-red-100/50 border-r border-red-100 sticky right-[2.5rem] z-20 w-10">
                               {att.a || "-"}
                             </td>
-                            <td className="px-3 py-3 text-center font-black text-emerald-600 bg-emerald-50/50 text-lg border-l border-emerald-100/50">
+                            <td className="px-1.5 py-0.5 text-center font-black text-emerald-600 bg-emerald-50 group-hover:bg-emerald-100 border-r border-emerald-100 sticky right-0 z-20 w-10">
                               {att.t || "-"}
                             </td>
                           </>
@@ -965,7 +949,7 @@ export default function Absensi({ onBack }) {
                             {tugasCols.map((col) => (
                               <td
                                 key={col}
-                                className="px-1 py-2 border-l border-slate-100 bg-emerald-50/20"
+                                className="px-0.5 py-0.5 border-r border-slate-50 bg-emerald-50/10"
                               >
                                 <input
                                   type="number"
@@ -977,18 +961,18 @@ export default function Absensi({ onBack }) {
                                       e.target.value,
                                     )
                                   }
-                                  className="w-full text-center bg-transparent text-sm font-medium focus:outline-none focus:bg-white rounded p-1"
+                                  className="w-full h-5 text-center bg-transparent text-[10px] font-bold focus:outline-none focus:bg-white rounded"
                                 />
                               </td>
                             ))}
-                            <td className="px-3 py-3 text-center font-bold text-emerald-700 bg-emerald-50/50">
+                            <td className="px-1.5 py-0.5 text-center font-bold text-emerald-700 bg-emerald-50/50 border-r border-emerald-100">
                               {grades.avgT}
                             </td>
 
                             {uhCols.map((col) => (
                               <td
                                 key={col}
-                                className="px-1 py-2 border-l border-slate-100 bg-blue-50/20"
+                                className="px-0.5 py-0.5 border-r border-slate-50 bg-blue-50/10"
                               >
                                 <input
                                   type="number"
@@ -1000,19 +984,19 @@ export default function Absensi({ onBack }) {
                                       e.target.value,
                                     )
                                   }
-                                  className="w-full text-center bg-transparent text-sm font-medium focus:outline-none focus:bg-white rounded p-1"
+                                  className="w-full h-5 text-center bg-transparent text-[10px] font-bold focus:outline-none focus:bg-white rounded"
                                 />
                               </td>
                             ))}
-                            <td className="px-3 py-3 text-center font-bold text-blue-700 bg-blue-50/50">
+                            <td className="px-1.5 py-0.5 text-center font-bold text-blue-700 bg-blue-50/50 border-r border-blue-100">
                               {grades.avgUH}
                             </td>
 
-                            <td className="px-4 py-3 text-center font-black text-slate-700 border-l border-slate-200 bg-slate-50/50">
+                            <td className="px-2 py-0.5 text-center font-black text-slate-700 bg-slate-50/50 border-r border-slate-100">
                               {grades.nh}
                             </td>
 
-                            <td className="px-1 py-2 border-l border-slate-200 bg-amber-50/30">
+                            <td className="px-0.5 py-0.5 border-r border-slate-100 bg-amber-50/20">
                               <input
                                 type="number"
                                 value={s.um || ""}
@@ -1023,24 +1007,16 @@ export default function Absensi({ onBack }) {
                                     e.target.value,
                                   )
                                 }
-                                className="w-full text-center bg-white border border-amber-200 text-amber-900 text-sm font-black focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg p-1.5 shadow-inner"
+                                className="w-full h-5 text-center bg-white border border-amber-200 text-amber-900 text-[10px] font-black focus:outline-none rounded"
                               />
                             </td>
 
-                            <td className="px-4 py-3 text-center font-black text-lg border-l border-slate-200 bg-teal-50/50 text-teal-700">
+                            {/* STICKY BODY CELL (PENILAIAN - RAPOR) */}
+                            <td className="px-2 py-0.5 text-center font-black text-[12px] border-l-2 border-slate-200 bg-teal-50 group-hover:bg-teal-100 text-teal-700 sticky right-0 z-20 w-16 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]">
                               {grades.nr}
                             </td>
                           </>
                         )}
-                        <td className="px-2 py-3 text-center border-l border-slate-100">
-                          <button
-                            onClick={() => deleteStudent(s.id, s.nama_siswa)}
-                            className="p-2 bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
-                            title="Hapus Siswa"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
                       </tr>
                     );
                   })
