@@ -24,65 +24,23 @@ export default function HomeTab({
 }) {
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
-      <style>{`
-        @keyframes gradientBG {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .colorful-glow-bg {
-          /* Dominan Teal cerah, dicampur sedikit Emerald dan Indigo terang */
-          background: linear-gradient(
-            -45deg, 
-            #2dd4bf, /* teal-400 */
-            #14b8a6, /* teal-500 */
-            #34d399, /* emerald-400 */
-            #818cf8, /* indigo-400 */
-            #2dd4bf  /* kembali ke teal-400 */
-          );
-          background-size: 500% 500%;
-          animation: gradientBG 15s ease infinite;
-        }
-      `}</style>
+      {/* Container Utama - Timbul & Kinclong Terang (Tanpa Unsur Gelap) */}
+      <div
+        className="bg-teal-400 rounded-3xl p-5 md:p-8 text-white relative overflow-hidden z-0
+        shadow-[0_15px_30px_rgba(45,212,191,0.4),inset_0_4px_0_rgba(255,255,255,0.9),inset_0_-4px_0_rgba(20,184,166,0.6)] 
+        border border-white/60"
+      >
+        {/* --- EFEK CAHAYA KINCLONG PUTIH --- */}
+        {/* Highlight putih pudar di bagian atas */}
+        <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/40 to-transparent pointer-events-none z-0"></div>
 
-      {/* Container Utama dengan Background Animasi Terang */}
-      <div className="colorful-glow-bg backdrop-blur-xl rounded-3xl p-5 md:p-8 text-white shadow-[0_20px_40px_rgba(20,184,166,0.3)] border border-white/40 relative overflow-hidden z-0">
-        {/* Cahaya 1: Campuran Rose & Amber (Sangat Cerah) */}
-        <motion.div
-          animate={{
-            x: [0, 60, -30, 0],
-            y: [0, -40, 50, 0],
-            rotate: [0, 180, 360],
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-24 -right-10 w-72 h-72 bg-gradient-to-br from-rose-300/50 to-amber-300/50 rounded-[40%] blur-3xl -z-10"
-        />
-
-        {/* Cahaya 2: Campuran Indigo & Putih (Menerangi bagian bawah) */}
-        <motion.div
-          animate={{
-            x: [0, -50, 40, 0],
-            y: [0, 60, -20, 0],
-            rotate: [360, 180, 0],
-          }}
-          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-24 -left-10 w-80 h-80 bg-gradient-to-tr from-indigo-300/50 to-white/40 rounded-[35%] blur-3xl -z-10"
-        />
-
-        {/* Cahaya 3: Campuran Emerald & Teal Muda (Mengapung di tengah) */}
-        <motion.div
-          animate={{
-            x: [0, 40, -40, 0],
-            y: [0, 30, -30, 0],
-            rotate: [0, -180, -360],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-10 left-1/3 w-64 h-64 bg-gradient-to-b from-emerald-300/50 to-teal-200/50 rounded-[50%] blur-3xl -z-10"
-        />
+        {/* Garis pantulan cahaya putih miring ala kaca */}
+        <div className="absolute -top-32 -left-24 w-40 h-[250%] bg-gradient-to-r from-transparent via-white/50 to-transparent rotate-[35deg] pointer-events-none z-0 transform"></div>
+        {/* ---------------------------------- */}
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-8 relative z-10">
           <div>
-            <p className="text-white/90 text-xs md:text-sm font-bold mb-1 flex items-center gap-2 tracking-wide uppercase drop-shadow-sm">
+            <p className="text-white font-bold mb-1 flex items-center gap-2 tracking-wide uppercase text-xs md:text-sm drop-shadow-sm">
               <TrendingUp size={16} /> Grand Total Dana
               {isSyncing && (
                 <RefreshCw
@@ -92,29 +50,46 @@ export default function HomeTab({
                 />
               )}
             </p>
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight drop-shadow-md text-white">
+            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white drop-shadow-md">
               {formatRp(grandTotalKeuangan)}
             </h2>
           </div>
           <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
-            <div className="bg-white/20 p-3 md:p-4 rounded-2xl border border-white/40 backdrop-blur-md shadow-inner">
-              <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
-                Total Cash
-              </p>
-              <p className="text-base md:text-xl font-bold text-white tracking-wide drop-shadow-sm">
-                {formatRp(totalCash)}
-              </p>
+            {/* Kartu Inner - Timbul Kinclong Putih */}
+            <div
+              className="bg-white/20 p-3 md:p-4 rounded-2xl border border-white/60 backdrop-blur-md relative overflow-hidden
+              shadow-[0_4px_10px_rgba(255,255,255,0.1),inset_0_2px_0_rgba(255,255,255,0.8)]"
+            >
+              {/* Pantulan kecil di dalam kartu inner */}
+              <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-0"></div>
+              <div className="relative z-10">
+                <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
+                  Total Cash
+                </p>
+                <p className="text-base md:text-xl font-bold text-white tracking-wide drop-shadow-sm">
+                  {formatRp(totalCash)}
+                </p>
+              </div>
             </div>
-            <div className="bg-white/20 p-3 md:p-4 rounded-2xl border border-white/40 backdrop-blur-md shadow-inner">
-              <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
-                Total Transfer
-              </p>
-              <p className="text-base md:text-xl font-bold text-white tracking-wide drop-shadow-sm">
-                {formatRp(totalTransfer)}
-              </p>
+            {/* Kartu Inner - Timbul Kinclong Putih */}
+            <div
+              className="bg-white/20 p-3 md:p-4 rounded-2xl border border-white/60 backdrop-blur-md relative overflow-hidden
+              shadow-[0_4px_10px_rgba(255,255,255,0.1),inset_0_2px_0_rgba(255,255,255,0.8)]"
+            >
+              {/* Pantulan kecil di dalam kartu inner */}
+              <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none z-0"></div>
+              <div className="relative z-10">
+                <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
+                  Total Transfer
+                </p>
+                <p className="text-base md:text-xl font-bold text-white tracking-wide drop-shadow-sm">
+                  {formatRp(totalTransfer)}
+                </p>
+              </div>
             </div>
           </div>
         </div>
+
         <div className="flex gap-6 border-t border-white/40 pt-4 mt-5 relative z-10">
           <div>
             <p className="text-white/90 text-[9px] md:text-[10px] uppercase tracking-widest mb-1 font-bold">
@@ -143,7 +118,7 @@ export default function HomeTab({
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-lg md:max-w-none mx-auto">
           <button
             onClick={() => openModal("siswa")}
-            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(20,184,166,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
+            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-[0_4px_10px_rgba(20,184,166,0.05),inset_0_2px_0_rgba(255,255,255,1)] hover:shadow-[0_20px_40px_rgba(20,184,166,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-teal-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-teal-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
@@ -155,7 +130,7 @@ export default function HomeTab({
           </button>
           <button
             onClick={() => navToTab("keuangan")}
-            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(245,158,11,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
+            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-[0_4px_10px_rgba(245,158,11,0.05),inset_0_2px_0_rgba(255,255,255,1)] hover:shadow-[0_20px_40px_rgba(245,158,11,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-amber-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
@@ -167,7 +142,7 @@ export default function HomeTab({
           </button>
           <button
             onClick={() => navToTab("nilai")}
-            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(59,130,246,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
+            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-[0_4px_10px_rgba(59,130,246,0.05),inset_0_2px_0_rgba(255,255,255,1)] hover:shadow-[0_20px_40px_rgba(59,130,246,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-blue-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
@@ -179,7 +154,7 @@ export default function HomeTab({
           </button>
           <button
             onClick={() => navToTab("keuangan")}
-            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(244,63,94,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
+            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-[0_4px_10px_rgba(244,63,94,0.05),inset_0_2px_0_rgba(255,255,255,1)] hover:shadow-[0_20px_40px_rgba(244,63,94,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-rose-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-rose-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
@@ -191,7 +166,7 @@ export default function HomeTab({
           </button>
           <button
             onClick={() => navToTab("jurnal")}
-            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
+            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-[0_4px_10px_rgba(16,185,129,0.05),inset_0_2px_0_rgba(255,255,255,1)] hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-emerald-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
@@ -203,7 +178,7 @@ export default function HomeTab({
           </button>
           <button
             onClick={() => navToTab("kisi")}
-            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-sm hover:shadow-[0_20px_40px_rgba(99,102,241,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
+            className="group p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl md:rounded-[1.2rem] shadow-[0_4px_10px_rgba(99,102,241,0.05),inset_0_2px_0_rgba(255,255,255,1)] hover:shadow-[0_20px_40px_rgba(99,102,241,0.15)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col items-center justify-center gap-2 relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100/50 rounded-bl-[100%] -z-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="w-10 h-10 bg-slate-50 text-slate-600 group-hover:bg-indigo-500 group-hover:text-white rounded-xl flex items-center justify-center transition-colors duration-300 shadow-inner">
