@@ -1,5 +1,5 @@
 // File: src/components/Navbar.jsx
-import React, { useState } from "react";
+import React from "react"; // useState dihapus jika tidak digunakan lagi di sini
 import {
   Home,
   Users,
@@ -18,10 +18,10 @@ export default function Navbar({ activeTab, navToTab, handleLogout }) {
       <nav className="bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-sm sticky top-0 z-40 no-print">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           <div className="flex justify-between items-center h-14 md:h-16">
-            {/* INI AREA PINTU RAHASIANYA */}
+            {/* AREA LOGO (Sekarang hanya navigasi biasa) */}
             <div
               className="flex items-center gap-2 cursor-pointer group shrink-0 select-none"
-              onClick={handleLogoClick}
+              onClick={() => navToTab("home")} // Langsung ke home, tanpa deteksi triple-click
             >
               <img
                 src="/logo.svg"
@@ -96,6 +96,7 @@ export default function Navbar({ activeTab, navToTab, handleLogout }) {
                 <span className="hidden lg:block">Keluar</span>
               </button>
             </div>
+
             <div className="md:hidden flex items-center gap-2 shrink-0">
               <button
                 onClick={handleLogout}
