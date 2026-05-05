@@ -11,34 +11,9 @@ import {
   LogOut,
 } from "lucide-react";
 
-// Import halaman rahasia Bapak
-import Absensi from "./Absensi";
-
 export default function Navbar({ activeTab, navToTab, handleLogout }) {
-  // State untuk melacak pintu rahasia
-  const [isSecretMode, setIsSecretMode] = useState(false);
-
-  // Deteksi Triple-Click pada Logo
-  const handleLogoClick = (e) => {
-    if (e.detail === 3) {
-      // Buka halaman rahasia pada klik ketiga
-      setIsSecretMode(true);
-    } else if (e.detail === 1) {
-      // Jalankan fungsi normal di klik pertama (kembali ke home)
-      // Ini sebagai kamuflase agar klik terlihat seperti tombol biasa
-      navToTab("home");
-    }
-  };
-
   return (
     <>
-      {/* OVERLAY PINTU RAHASIA (Menutupi seluruh layar) */}
-      {isSecretMode && (
-        <div className="fixed inset-0 z-[100] bg-slate-50 overflow-y-auto">
-          <Absensi onBack={() => setIsSecretMode(false)} />
-        </div>
-      )}
-
       {/* NAVBAR NORMAL */}
       <nav className="bg-white/80 backdrop-blur-xl border-b border-white/60 shadow-sm sticky top-0 z-40 no-print">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
